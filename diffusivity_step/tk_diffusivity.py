@@ -2,9 +2,10 @@
 
 """The graphical part of a Diffusivity step"""
 
-import pprint  # noqa: F401
+import tkinter as tk
+import tkinter.ttk as ttk
 
-import diffusivity_step  # noqa: F401
+from .diffusivity_parameters import DiffusivityParameters
 import seamm
 from seamm_util import ureg, Q_, units_class  # noqa: F401
 import seamm_widgets as sw
@@ -50,6 +51,7 @@ class TkDiffusivity(seamm.TkNode):
         self,
         tk_flowchart=None,
         node=None,
+        namespace="org.molssi.seamm.tk",
         canvas=None,
         x=None,
         y=None,
@@ -82,6 +84,7 @@ class TkDiffusivity(seamm.TkNode):
         -------
         None
         """
+        self.namespace = namespace
         self.dialog = None
 
         super().__init__(
@@ -93,11 +96,12 @@ class TkDiffusivity(seamm.TkNode):
             w=w,
             h=h,
         )
+        self.create_dialog()
 
     def create_dialog(self):
         """
         Create the dialog. A set of widgets will be chosen by default
-        based on what is specified in the Diffusivity_parameters
+        based on what is specified in the  diffusivity parameters
         module.
 
         Parameters
@@ -113,18 +117,51 @@ class TkDiffusivity(seamm.TkNode):
         TkDiffusivity.reset_dialog
         """
 
-        frame = super().create_dialog(title="Diffusivity")
+        frame = super().create_dialog(title="Diffusivity", widget="notebook")
+        # make it large!
+        screen_w = self.dialog.winfo_screenwidth()
+        screen_h = self.dialog.winfo_screenheight()
+        w = int(0.9 * screen_w)
+        h = int(0.8 * screen_h)
+        x = int(0.05 * screen_w / 2)
+        y = int(0.1 * screen_h / 2)
+
+        self.dialog.geometry(f"{w}x{h}+{x}+{y}")
+
+        # Add a frame for the flowchart
+        notebook = self["notebook"]
+        flowchart_frame = ttk.Frame(notebook)
+        self["flowchart frame"] = flowchart_frame
+        notebook.add(flowchart_frame, text="Flowchart", sticky=tk.NSEW)
+
+        self.tk_subflowchart = seamm.TkFlowchart(
+            master=flowchart_frame,
+            flowchart=self.node.subflowchart,
+            namespace=self.namespace,
+        )
+        self.tk_subflowchart.draw()
+
+        # Fill in the control parameters
         # Shortcut for parameters
         P = self.node.parameters
 
-        # Then create the widgets
-        for key in P:
-            if key[0] != "_" and key not in (
-                "results",
-                "extra keywords",
-                "create tables",
-            ):
-                self[key] = P[key].widget(frame)
+        # diffusivity frame to isolate widgets
+        frame = self["diffusivity frame"] = ttk.LabelFrame(
+            self["frame"],
+            borderwidth=4,
+            relief="sunken",
+            text="Diffusivity",
+            labelanchor="n",
+            padding=10,
+        )
+
+        for key in DiffusivityParameters.parameters:
+            self[key] = P[key].widget(frame)
+
+        # and binding to change as needed
+        self["approach"].combobox.bind(
+            "<<ComboboxSelected>>", self.reset_diffusivity_frame
+        )
 
         # and lay them out
         self.reset_dialog()
@@ -133,7 +170,7 @@ class TkDiffusivity(seamm.TkNode):
         """Layout the widgets in the dialog.
 
         The widgets are chosen by default from the information in
-        Diffusivity_parameter.
+        Diffusivity parameters.
 
         This function simply lays them out row by row with
         aligned labels. You may wish a more complicated layout that
@@ -158,32 +195,35 @@ class TkDiffusivity(seamm.TkNode):
         for slave in frame.grid_slaves():
             slave.grid_forget()
 
-        # Shortcut for parameters
-        P = self.node.parameters
-
-        # keep track of the row in a variable, so that the layout is flexible
-        # if e.g. rows are skipped to control such as "method" here
         row = 0
+
+        self["diffusivity frame"].grid(row=row, column=0, sticky=tk.EW, pady=10)
+        row += 1
+        self.reset_diffusivity_frame()
+
+        return row
+
+    def reset_diffusivity_frame(self, widget=None):
+        """Layout the widgets in the diffusivity frame
+        as needed for the current state"""
+
+        # approach = self["approach"].get()
+
+        frame = self["diffusivity frame"]
+        for slave in frame.grid_slaves():
+            slave.grid_forget()
+
+        row = 0
+
+        # Main controls
         widgets = []
-        for key in P:
-            if key[0] != "_" and key not in (
-                "results",
-                "extra keywords",
-                "create tables",
-            ):
-                self[key].grid(row=row, column=0, sticky=tk.EW)
-                widgets.append(self[key])
-                row += 1
+        for key in ("approach", "nruns", "errors"):
+            self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
+            widgets.append(self[key])
+            row += 1
 
-        # Align the labels
         sw.align_labels(widgets, sticky=tk.E)
-
-        # Setup the results if there are any
-        have_results = (
-            "results" in self.node.metadata and len(self.node.metadata["results"]) > 0
-        )
-        if have_results and "results" in P:
-            self.setup_results()
+        frame.columnconfigure(0, minsize=50)
 
     def right_click(self, event):
         """
@@ -203,6 +243,6 @@ class TkDiffusivity(seamm.TkNode):
         """
 
         super().right_click(event)
-        self.popup_menu.add_command(label="Edit..", command=self.edit)
+        self.popup_menu.add_command(label="Edit...", command=self.edit)
 
         self.popup_menu.tk_popup(event.x_root, event.y_root, 0)

@@ -33,7 +33,7 @@ class DiffusivityStep(object):
 
     my_description = {
         "description": "An interface for Diffusivity",
-        "group": "Simulations",
+        "group": "Properties",
         "name": "Diffusivity",
     }
 

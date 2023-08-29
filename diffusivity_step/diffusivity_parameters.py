@@ -5,7 +5,6 @@ Control parameters for the Diffusivity step in a SEAMM flowchart
 
 import logging
 import seamm
-import pprint  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -74,25 +73,41 @@ class DiffusivityParameters(seamm.Parameters):
     """
 
     parameters = {
-        "time": {
-            "default": 100.0,
-            "kind": "float",
-            "default_units": "ps",
-            "enumeration": tuple(),
-            "format_string": ".1f",
-            "description": "Simulation time:",
-            "help_text": ("The time to simulate in the dynamics run."),
+        "approach": {
+            "default": "both",
+            "kind": "enum",
+            "default_units": "",
+            "enumeration": (
+                "both",
+                "Green-Kubo",
+                "Mean Square Displacement (MSD)",
+            ),
+            "format_string": "",
+            "description": "Approach:",
+            "help_text": "The approach or method for determining the diffusivity.",
         },
-        # # Results handling ... uncomment if needed
-        # "results": {
-        #     "default": {},
-        #     "kind": "dictionary",
-        #     "default_units": "",
-        #     "enumeration": tuple(),
-        #     "format_string": "",
-        #     "description": "results",
-        #     "help_text": "The results to save to variables or in tables.",
-        # },
+        "nruns": {
+            "default": "20",
+            "kind": "integer",
+            "default_units": "",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "Number of runs to average:",
+            "help_text": "The number for separate runs to average.",
+        },
+        "errors": {
+            "default": "continue to next run",
+            "kind": "string",
+            "default_units": "",
+            "enumeration": (
+                "continue to next run",
+                "exit the thermal conductivity step",
+                "stop the job",
+            ),
+            "format_string": "s",
+            "description": "On errors",
+            "help_text": "How to handle errors in the runs",
+        },
     }
 
     def __init__(self, defaults={}, data=None):

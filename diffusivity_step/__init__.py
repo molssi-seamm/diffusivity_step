@@ -8,11 +8,12 @@ A SEAMM plug-in for Diffusivity
 # Bring up the classes so that they appear to be directly in
 # the diffusivity_step package.
 
-from .diffusivity import Diffusivity  # noqa: F401, E501from .diffusivity_parameters import DiffusivityParameters  # noqa: F401, E501
-from .diffusivity_step import DiffusivityStep  # noqa: F401, E501
-from .tk_diffusivity import TkDiffusivity  # noqa: F401, E501
+from .diffusivity import Diffusivity
+from .diffusivity_parameters import DiffusivityParameters
+from .diffusivity_step import DiffusivityStep
+from .tk_diffusivity import TkDiffusivity
 
-from .metadata import metadata  # noqa: F401
+from .metadata import metadata
 
 # Handle versioneer
 from ._version import get_versions
