@@ -13,8 +13,8 @@ dependencies:
   - numpy
   - scipy
   - seamm
-  - seamm_util
-  - seamm_widgets
+  - seamm-util
+  - seamm-widgets
   - tabulate
 
   # Testing
