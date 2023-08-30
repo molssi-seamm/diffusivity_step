@@ -1,7 +1,8 @@
 Welcome to the documentation for the Diffusivity SEAMM plug-in
 ==============================================================
 
-Diffusivity <does what? replace this text>
+This diffusivity step calculates the diffusion coefficients, currently using molecular
+dynamics though in the future other approaches may be added.
 
 .. grid:: 1 1 2 2
 
