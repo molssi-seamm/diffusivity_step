@@ -894,6 +894,7 @@ class Diffusivity(seamm.Node):
 
     def set_subids(self, node_id=()):
         """Set the ids of the nodes in the subflowchart"""
+        self.subflowchart.reset_visited()
         node = self.subflowchart.get_node("1").next()
         n = 1
         while node is not None:
