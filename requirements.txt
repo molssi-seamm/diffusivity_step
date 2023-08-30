@@ -1,3 +1,7 @@
+molsystem
+numpy
+scipy
 seamm
 seamm-util
 seamm-widgets
+tabulate
