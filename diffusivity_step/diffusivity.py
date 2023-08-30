@@ -18,8 +18,8 @@ from .analysis import (
     compute_msd,
     add_msd_trace,
     fit_msd,
+    add_helfand_trace,
     create_helfand_moments,
-    plot_helfand_moments,
 )
 import diffusivity_step
 import molsystem
@@ -167,8 +167,8 @@ class Diffusivity(seamm.Node):
 
         self._use_velocity = False
         self._velocity_dt = None
-        self._Ms = []
-        self._M_errs = []
+        self._Ms = None
+        self._M_errs = None
         self._M = None
         self._M_err = None
 
@@ -212,10 +212,13 @@ class Diffusivity(seamm.Node):
         indent: str
             An extra indentation for the output
         """
-        # n_species = len(self.species)
+        data = {}
+
         if style == "1-line":
             table = {
                 "Run": [],
+                "Method": [],
+                "Species": [],
                 "Dx": [],
                 "ex": [],
                 "Dy": [],
@@ -287,31 +290,51 @@ class Diffusivity(seamm.Node):
                     )
                     if style == "1-line":
                         if i == 0:
-                            table["Run"].append(run)
+                            if spec == 0:
+                                table["Run"].append(run)
+                                table["Method"].append("MSD")
+                            else:
+                                table["Run"].append("")
+                                table["Method"].append("")
+                            table["Species"].append(smiles)
                         alpha = self._tensor_labels[i][0]
                         table["D" + alpha].append(v)
                         table["e" + alpha].append(e)
                     elif style == "full":
+                        table["Species"].append(smiles if i == 0 else "")
                         table["Method"].append("MSD" if i == 0 else "")
                         if self._tensor_labels[i][0] == "":
                             table["Dir"].append("total")
+                            if "D {key} (MSD)" in data:
+                                data["D {key} (MSD)"][smiles] = d_coeff
+                                data["D {key} (MSD), stderr"][smiles] = 2 * err
+                            else:
+                                data["D {key} (MSD)"] = {smiles: d_coeff}
+                                data["D {key} (MSD), stderr"] = {smiles: 2 * err}
                         else:
                             table["Dir"].append(self._tensor_labels[i][0])
+                            key = f"D{self._tensor_labels[i][0]}" + " {key} (MSD)"
+                            if key in data:
+                                data[key][smiles] = d_coeff
+                                data[key + ", stderr"][smiles] = 2 * err
+                            else:
+                                data[key] = {smiles: d_coeff}
+                                data[key + ", stderr"] = {smiles: 2 * err}
                         table["D"].append(v)
                         table["±"].append("±")
                         table["95%"].append(e)
                         table["Units"].append("m^2/s" if i == 0 else "")
 
-                    add_msd_trace(
-                        plot,
-                        x_axis,
-                        y_axis,
-                        smiles,
-                        self._msd[spec],
-                        ts,
-                        err=self._msd_err[spec] * 2,
-                        fit=fit,
-                    )
+                add_msd_trace(
+                    plot,
+                    x_axis,
+                    y_axis,
+                    smiles,
+                    self._msd[spec],
+                    ts,
+                    err=self._msd_err[spec] * 2,
+                    fit=fit,
+                )
 
             figure.grid_plots("MSD")
 
@@ -326,59 +349,105 @@ class Diffusivity(seamm.Node):
                 figure.dump(path)
 
         if self._use_velocity:
-            nframes, nalpha = self._M.shape
+            # Fit the Helfand moments
+            nframes, nalpha = self._M[0].shape
             ts = np.arange(nframes) * self._velocity_dt.m_as("ps")  # Scale to ps
             ts = ts.tolist()
 
-            # Fit the slopes
-            fit = []
-            for i in range(nalpha):
-                start = 1
-                slope, err, xs, ys = fit_msd(
-                    self._M[:, i], ts, sigma=self._M_err[:, i], start=start
-                )
-                d_coeff = slope
-                err = err
-                if self._scale is None:
-                    # Set a scale factor to make the numbers managable
-                    self._scale = 10 ** floor(log10(d_coeff))
-                v, e = fmt_err(d_coeff / self._scale, 2 * err / self._scale)
-                fit.append(
-                    {
-                        "D": d_coeff,
-                        "stderr": err,
-                        "xs": xs,
-                        "ys": ys,
-                        "scale": self._scale,
-                        "D_s": v,
-                        "err_s": e,
-                    }
-                )
-                if style == "1-line":
-                    if i == 0 and not self._use_msd:
-                        table["Run"].append(run)
-                    alpha = self._tensor_labels[i][0]
-                    table["D" + alpha].append(v)
-                    table["e" + alpha].append(e)
-                elif style == "full":
-                    table["Method"].append("Helfand Moments" if i == 0 else "")
-                    if self._tensor_labels[i][0] == "":
-                        table["Dir"].append("total")
-                    else:
-                        table["Dir"].append(self._tensor_labels[i][0])
-                    table["D"].append(v)
-                    table["±"].append("±")
-                    table["95%"].append(e)
-                    table["Units"].append("m^2/s" if i == 0 else "")
-
-            # Plot the Helfand moments
+            # Create the plot for the Helfand moments
             figure = self.create_figure(
                 module_path=("seamm",),
                 template="line.graph_template",
                 title="Helfand Moments",
             )
+            plot = figure.add_plot("HelfandMoments")
 
-            plot_helfand_moments(figure, self._M, ts, err=self._M_err * 2, fit=fit)
+            x_axis = plot.add_axis("x", label="Time (ps)")
+            y_axis = plot.add_axis("y", label="M (Å^2)", anchor=x_axis)
+            x_axis.anchor = y_axis
+
+            for spec, smiles in enumerate(self.species.keys()):
+                # Fit the slopes
+                fit = []
+                for i in range(nalpha):
+                    start = 1
+                    slope, err, xs, ys = fit_msd(
+                        self._M[spec][:, i],
+                        ts,
+                        sigma=self._M_err[spec][:, i],
+                        start=start,
+                    )
+                    d_coeff = slope
+                    err = err
+                    if self._scale is None:
+                        # Set a scale factor to make the numbers managable
+                        self._scale = 10 ** floor(log10(d_coeff))
+                    v, e = fmt_err(d_coeff / self._scale, 2 * err / self._scale)
+                    fit.append(
+                        {
+                            "Species": smiles,
+                            "D": d_coeff,
+                            "stderr": err,
+                            "xs": xs,
+                            "ys": ys,
+                            "scale": self._scale,
+                            "D_s": v,
+                            "err_s": e,
+                        }
+                    )
+                    if style == "1-line":
+                        if i == 0:
+                            if spec == 0:
+                                if not self._use_msd:
+                                    table["Run"].append(run)
+                                else:
+                                    table["Run"].append("")
+                                table["Method"].append("Helfand Moments")
+                            else:
+                                table["Run"].append("")
+                                table["Method"].append("")
+                            table["Species"].append(smiles)
+                        alpha = self._tensor_labels[i][0]
+                        table["D" + alpha].append(v)
+                        table["e" + alpha].append(e)
+                    elif style == "full":
+                        table["Species"].append(smiles if i == 0 else "")
+                        table["Method"].append("Helfand Moments" if i == 0 else "")
+                        if self._tensor_labels[i][0] == "":
+                            table["Dir"].append("total")
+                        else:
+                            table["Dir"].append(self._tensor_labels[i][0])
+                        table["D"].append(v)
+                        table["±"].append("±")
+                        table["95%"].append(e)
+                        table["Units"].append("m^2/s" if i == 0 else "")
+                        if i == 0:
+                            key = "D {key} (HM)"
+                            if key in data:
+                                data[key][smiles] = d_coeff
+                                data[key + ", stderr"][smiles] = 2 * err
+                            else:
+                                data[key] = {smiles: d_coeff}
+                                data[key + ", stderr"] = {smiles: 2 * err}
+                        else:
+                            key = f"D{self._tensor_labels[i][0]}" + " {key} (HM)"
+                            if key in data:
+                                data[key][smiles] = d_coeff
+                                data[key + ", stderr"][smiles] = 2 * err
+                            else:
+                                data[key] = {smiles: d_coeff}
+                                data[key + ", stderr"] = {smiles: 2 * err}
+
+                add_helfand_trace(
+                    plot,
+                    x_axis,
+                    y_axis,
+                    smiles,
+                    self._M[spec],
+                    ts,
+                    err=self._M_err[spec] * 2,
+                    fit=fit,
+                )
 
             figure.grid_plots("HelfandMoments")
 
@@ -414,6 +483,7 @@ class Diffusivity(seamm.Node):
                     first = -3
                 else:
                     first = -2
+                first = 3
                 if run is not None and run == P["nruns"]:
                     text += "\n".join(tmp.splitlines()[first:])
                 else:
@@ -444,6 +514,19 @@ class Diffusivity(seamm.Node):
             text += "\n"
 
             printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
+
+            # And store results, only for the full output at the end
+            ff = self.get_variable("_forcefield")
+            if ff == "OpenKIM":
+                self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+            else:
+                # Valence forcefield...
+                self._model = ff.current_forcefield
+
+            self.store_results(
+                configuration=self.configuration,
+                data=data,
+            )
 
     def create_parser(self):
         """Setup the command-line / config file parser"""
@@ -764,6 +847,13 @@ class Diffusivity(seamm.Node):
                 raise NotImplementedError(
                     f"Cannot handle multiple com velocity files from run {run}."
                 )
+
+            species = [x for x in self.species.values()]
+
+            if self._Ms is None:
+                self._Ms = [[] for i in range(n_species)]
+                self._M_errs = [[] for i in range(n_species)]
+
             metadata, result = read_vector_trajectory(paths[0])
             self._velocity_dt = Q_(metadata["dt"], metadata["tunits"])
 
@@ -775,18 +865,21 @@ class Diffusivity(seamm.Node):
             v_sq = Q_("Å^2/fs^2")
             constants = (v_sq * self._velocity_dt.units).m_as("m^2/s") / 2
 
-            M, err = create_helfand_moments(result, m=m)
-            M *= constants
-            err *= constants
-            self._Ms.append(M)
-            self._M_errs.append(err)
+            M, err = create_helfand_moments(result, species, m=m)
+            for i in range(n_species):
+                M[i] *= constants
+                err[i] *= constants
+                self._Ms[i].append(M[i])
+                self._M_errs[i].append(err[i])
+
             if run == 1:
                 self._M = M
                 self._M_err = err
             else:
-                tmp = np.stack(self._Ms)
-                self._M = np.average(tmp, axis=0)
-                self._M_err = np.std(tmp, axis=0)
+                for i in range(n_species):
+                    tmp = np.stack(self._Ms[i])
+                    self._M[i] = np.average(tmp, axis=0)
+                    self._M_err[i] = np.std(tmp, axis=0)
 
     def set_id(self, node_id=()):
         """Sequentially number the subnodes"""

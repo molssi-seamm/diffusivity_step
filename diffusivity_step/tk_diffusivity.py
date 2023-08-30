@@ -156,7 +156,8 @@ class TkDiffusivity(seamm.TkNode):
         )
 
         for key in DiffusivityParameters.parameters:
-            self[key] = P[key].widget(frame)
+            if key not in ("results",):
+                self[key] = P[key].widget(frame)
 
         # and binding to change as needed
         self["approach"].combobox.bind(
@@ -165,6 +166,8 @@ class TkDiffusivity(seamm.TkNode):
 
         # and lay them out
         self.reset_dialog()
+
+        self.setup_results()
 
     def reset_dialog(self, widget=None):
         """Layout the widgets in the dialog.

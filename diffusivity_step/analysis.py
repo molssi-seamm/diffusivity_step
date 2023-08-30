@@ -74,19 +74,21 @@ def compute_msd(xyz, species, average=True):
     return msd, err
 
 
-def create_helfand_moments(v, m=None):
+def create_helfand_moments(v, species, m=None):
     """Create the Helfand moments from velocities
 
     Parameters
     ----------
     v : numpy.ndarray(nframes, nmols, 3)
         The heat fluxes in x, y, and z
+    species : [[int]] or numpy.ndarray
+        Indices of the molecules for each species
     m : int
         The length of the Helfand moments wanted
 
     Returns
     -------
-    numpy.ndarray(m, 3)
+    [numpy.ndarray(m, 3)] * nspecies
         The Helfand moments
     """
 
@@ -94,31 +96,37 @@ def create_helfand_moments(v, m=None):
     if m is None:
         m = min(n // 20, 10000)
 
-    M = np.zeros((m, 4))
-    M_err = np.zeros((m, 4))
+    Ms = []
+    M_errs = []
+    for i, molecules in enumerate(species):
+        M = np.zeros((m, 4))
+        M_err = np.zeros((m, 4))
 
-    for alpha in range(3):
-        tmp = np.zeros((m, nmols))
+        for alpha in range(3):
+            tmp = np.zeros((m, len(molecules)))
+            for i in range(n - m):
+                integral = cumulative_trapezoid(
+                    v[i : m + i, molecules, alpha], initial=0.0, axis=0
+                )
+                tmp += integral * integral
+            M[:, alpha] = np.average(tmp, axis=1)
+            M_err[:, alpha] = np.std(tmp, axis=1)
+
+        # and sum
+        vsum = v[:, molecules, 0] + v[:, molecules, 1] + v[:, molecules, 2]
+        tmp = np.zeros((m, len(molecules)))
         for i in range(n - m):
-            integral = cumulative_trapezoid(v[i : m + i, :, alpha], initial=0.0, axis=0)
+            integral = cumulative_trapezoid(vsum[i : m + i, :], initial=0.0, axis=0)
             tmp += integral * integral
-        M[:, alpha] = np.average(tmp, axis=1)
-        M_err[:, alpha] = np.std(tmp, axis=1)
+        M[:, 3] = np.average(tmp, axis=1)
+        M_err[:, 3] = np.std(tmp, axis=1)
 
-    # and sum
-    vsum = v[:, :, 0] + v[:, :, 1] + v[:, :, 2]
-    # vsum = np.sqrt(v[:, :, 0] ** 2)
-    tmp = np.zeros((m, nmols))
-    for i in range(n - m):
-        integral = cumulative_trapezoid(vsum[i : m + i, :], initial=0.0, axis=0)
-        tmp += integral * integral
-    M[:, 3] = np.average(tmp, axis=1)
-    M_err[:, 3] = np.std(tmp, axis=1)
+        M /= n - m
+        M_err /= n - m
 
-    M /= n - m
-    M_err /= n - m
-
-    return M, M_err
+        Ms.append(M)
+        M_errs.append(M_err)
+    return Ms, M_errs
 
 
 def fit_helfand_moment(y, xs, sigma=None, start=1):
@@ -223,6 +231,94 @@ def fit_msd(y, xs, sigma=None, start=1):
     return slope, err, xs[i:], ys
 
 
+def add_helfand_trace(
+    plot, x_axis, y_axis, species, M, ts, err=None, fit=None, labels=tensor_labels
+):
+    """Add a trace for the Helfand moments.
+
+    Parameters
+    ----------
+    plot : seamm_util.plot
+        The plot that contains the traces
+
+    x_axis :
+        The x axis for the plot
+
+    y_axis :
+        The y axis for the plot
+
+    species : str
+        The label for the species
+
+    M : numpy.mdarray(m, 3)
+        The Helfand moments, in m^2
+
+    ts : [float]
+        The times associated with the moments, in ps
+
+    err : numpy.mdarray(n, 3 or 4)
+        The std error on the moments
+
+    fit : {str: any}
+        The information for the fit to the curve
+
+    labels : {str: xxx}
+        The labels for the directions
+    """
+    nsteps, nalpha = M.shape
+
+    for i in range(nalpha):
+        label, color, colora = tensor_labels[i]
+        if fit is not None:
+            hover = (
+                f"{species} D{label} = ({fit[i]['D_s']} ± {fit[i]['err_s']}) * "
+                f"{fit[i]['scale']:.1e} m^2/s"
+            )
+            plot.add_trace(
+                x_axis=x_axis,
+                y_axis=y_axis,
+                name=f"{species} fit{label}",
+                hovertemplate=hover,
+                x=fit[i]["xs"],
+                xlabel="t",
+                xunits="ps",
+                y=fit[i]["ys"],
+                ylabel=f"{species} fit{label}",
+                yunits="Å^2",
+                color=color,
+                dash="dash",
+                width=3,
+            )
+        if err is not None:
+            errs = np.concatenate((M[:, i] + err[:, i], M[::-1, i] - err[::-1, i]))
+            plot.add_trace(
+                x_axis=x_axis,
+                y_axis=y_axis,
+                name=f"{species} ±{label}",
+                x=ts + ts[::-1],
+                xlabel="t",
+                xunits="ps",
+                y=errs.tolist(),
+                ylabel=f"{species} ±{label}",
+                yunits="Å^2",
+                color=colora,
+                fill="toself",
+                visible="legendonly",
+            )
+        plot.add_trace(
+            x_axis=x_axis,
+            y_axis=y_axis,
+            name=f"{species} M{label}",
+            x=ts,
+            xlabel="t",
+            xunits="ps",
+            y=M[:, i].tolist(),
+            ylabel=f"{species} M{label}",
+            yunits="Å^2",
+            color=color,
+        )
+
+
 def plot_helfand_moments(figure, M, ts, err=None, fit=None, labels=tensor_labels):
     """Create a plot for the Helfand moments.
 
@@ -316,15 +412,31 @@ def add_msd_trace(
     plot : seamm_util.plot
         The plot that contains the traces
 
+    x_axis :
+        The x axis for the plot
+
+    y_axis :
+        The y axis for the plot
+
+    species : str
+        The label for the species
+
     msd : numpy.mdarray(n, 3 or 4)
         The MSD in x, y, and z, and optionally the average
 
     ts : [float]
         The times associated with the MSD, in ps
+
+    err : numpy.mdarray(n, 3 or 4)
+        The std error on the msd values
+
+    fit : {str: any}
+        The information for the fit to the curve
+
+    labels : {str: xxx}
+        The labels for the directions
     """
     nsteps, nalpha = msd.shape
-
-    print(f"{nalpha=} {len(fit)=}")
 
     for i in range(nalpha):
         label, color, colora = tensor_labels[i]

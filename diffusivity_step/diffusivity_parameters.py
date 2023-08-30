@@ -108,6 +108,15 @@ class DiffusivityParameters(seamm.Parameters):
             "description": "On errors",
             "help_text": "How to handle errors in the runs",
         },
+        "results": {
+            "default": {},
+            "kind": "dictionary",
+            "default_units": None,
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "results",
+            "help_text": "The results to save to variables or in tables.",
+        },
     }
 
     def __init__(self, defaults={}, data=None):
