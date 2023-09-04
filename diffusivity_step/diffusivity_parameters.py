@@ -74,12 +74,12 @@ class DiffusivityParameters(seamm.Parameters):
 
     parameters = {
         "approach": {
-            "default": "both",
+            "default": "Mean Square Displacement (MSD)",
             "kind": "enum",
             "default_units": "",
             "enumeration": (
                 "both",
-                "Green-Kubo",
+                "Helfand moments",
                 "Mean Square Displacement (MSD)",
             ),
             "format_string": "",
