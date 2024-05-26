@@ -508,7 +508,7 @@ class Diffusivity(seamm.Node):
             )
             length = len(tmp.splitlines()[0])
             text += "\n"
-            text += f"Diffusion Coefficients (* {self._scale:.1e})".center(length)
+            text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
             text += "\n"
             text += tmp
             text += "\n"
@@ -587,6 +587,9 @@ class Diffusivity(seamm.Node):
         if not short:
             # The subflowchart
             self.subflowchart.root_directory = self.flowchart.root_directory
+
+            # Make sure that the subflowchart has the executor
+            self.subflowchart.executor = self.flowchart.executor
 
             # Get the first real node
             node = self.subflowchart.get_node("1").next()
