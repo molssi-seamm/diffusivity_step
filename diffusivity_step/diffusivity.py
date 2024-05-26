@@ -588,6 +588,9 @@ class Diffusivity(seamm.Node):
             # The subflowchart
             self.subflowchart.root_directory = self.flowchart.root_directory
 
+            # Make sure that the subflowchart has the executor
+            self.subflowchart.executor = self.flowchart.executor
+
             # Get the first real node
             node = self.subflowchart.get_node("1").next()
 
