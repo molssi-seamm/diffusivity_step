@@ -508,7 +508,7 @@ class Diffusivity(seamm.Node):
             )
             length = len(tmp.splitlines()[0])
             text += "\n"
-            text += f"Diffusion Coefficients (* {self._scale:.1e})".center(length)
+            text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
             text += "\n"
             text += tmp
             text += "\n"
