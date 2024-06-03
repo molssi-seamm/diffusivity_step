@@ -550,6 +550,7 @@ class Diffusivity(seamm.Node):
             )
 
         # Now need to walk through the steps in the subflowchart...
+        self.subflowchart.reset_visited()
         node = self.subflowchart.get_node("1").next()
         while node is not None:
             node = node.create_parser()

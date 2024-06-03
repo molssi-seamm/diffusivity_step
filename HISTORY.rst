@@ -1,6 +1,10 @@
 =======
 History
 =======
+2024.6.3 -- Bugfix: handling of options for subflowchart
+    * Fixed a bug where the options for the subflowchart were not being parsed
+      correctly.
+
 2024.5.26 -- Updated for new task handling
     * The new handling of running tasks such as LAMMPS required a small change in the
       code.
