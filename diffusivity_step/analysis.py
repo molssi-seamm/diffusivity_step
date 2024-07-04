@@ -129,7 +129,7 @@ def create_helfand_moments(v, species, m=None):
     return Ms, M_errs
 
 
-def fit_helfand_moment(y, xs, sigma=None, start=1):
+def fit_helfand_moment(y, xs, sigma=None, start=0.1, end=0.9):
     """Find the best linear fit.
 
     Parameters
@@ -143,6 +143,12 @@ def fit_helfand_moment(y, xs, sigma=None, start=1):
     sigma : [float] or numpy.ndarray()
         Optional standard error of y
 
+    start : float
+        Fraction of vector to ignore at the beginning
+
+    end : float
+        The fraction of vector to end at
+
     Returns
     -------
     slope : float
@@ -154,33 +160,39 @@ def fit_helfand_moment(y, xs, sigma=None, start=1):
     ys : [float]
         The y values for the fit curve.
     """
-    dx = xs[1] - xs[0]
+    # We know the curves curve near the origin, so ignore the first part and last
+    n = len(y)
+    i = int(n * start)
+    j = int(n * end)
 
-    # We know the curves curve near the origin, so ignore the first part
-    i = int(start / dx)
-    if i > len(y):
-        i = int(1 / dx)
-
-    popt, pcov, infodict, msg, ierr = curve_fit(
-        axb,
-        xs[i:],
-        y[i:],
-        full_output=True,
-        sigma=sigma[i:],
-        absolute_sigma=True,
-    )
+    if sigma is None:
+        popt, pcov, infodict, msg, ierr = curve_fit(
+            axb,
+            xs[i:j],
+            y[i:j],
+            full_output=True,
+        )
+    else:
+        popt, pcov, infodict, msg, ierr = curve_fit(
+            axb,
+            xs[i:j],
+            y[i:j],
+            full_output=True,
+            sigma=sigma[i:j],
+            absolute_sigma=True,
+        )
     slope = float(popt[0])
     b = float(popt[1])
     err = float(np.sqrt(np.diag(pcov)[0]))
 
     ys = []
-    for x in xs[i:]:
+    for x in xs[i:j]:
         ys.append(axb(x, slope, b))
 
-    return slope, err, xs[i:], ys
+    return slope, err, xs[i:j], ys
 
 
-def fit_msd(y, xs, sigma=None, start=1):
+def fit_msd(y, xs, sigma=None, start=0.1, end=0.9):
     """Find the best linear fit to longest possible segment.
 
     Parameters
@@ -194,6 +206,12 @@ def fit_msd(y, xs, sigma=None, start=1):
     sigma : [float] or numpy.ndarray()
         Optional standard error of y
 
+    start : float
+        Fraction of vector to ignore at the beginning
+
+    end : float
+        The fraction of vector to end at
+
     Returns
     -------
     slope : float
@@ -205,30 +223,36 @@ def fit_msd(y, xs, sigma=None, start=1):
     ys : [float]
         The y values for the fit curve.
     """
-    dx = xs[1] - xs[0]
+    # We know the curves curve near the origin, so ignore the first part and last
+    n = len(y)
+    i = int(n * start)
+    j = int(n * end)
 
-    # We know the curves curve near the origin, so ignore the first part
-    i = int(start / dx)
-    if i > len(y):
-        i = int(1 / dx)
-
-    popt, pcov, infodict, msg, ierr = curve_fit(
-        axb,
-        xs[i:],
-        y[i:],
-        full_output=True,
-        sigma=sigma[i:],
-        absolute_sigma=True,
-    )
+    if sigma is None:
+        popt, pcov, infodict, msg, ierr = curve_fit(
+            axb,
+            xs[i:j],
+            y[i:j],
+            full_output=True,
+        )
+    else:
+        popt, pcov, infodict, msg, ierr = curve_fit(
+            axb,
+            xs[i:j],
+            y[i:j],
+            full_output=True,
+            sigma=sigma[i:],
+            absolute_sigma=True,
+        )
     slope = float(popt[0])
     b = float(popt[1])
     err = float(np.sqrt(np.diag(pcov)[0]))
 
     ys = []
-    for x in xs[i:]:
+    for x in xs[i:j]:
         ys.append(axb(x, slope, b))
 
-    return slope, err, xs[i:], ys
+    return slope, err, xs[i:j], ys
 
 
 def add_helfand_trace(

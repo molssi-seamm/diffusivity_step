@@ -201,7 +201,15 @@ class Diffusivity(seamm.Node):
             self._species = self.parse_molecules()
         return self._species
 
-    def analyze(self, indent="", P=None, style="full", run=None, **kwargs):
+    def analyze(
+        self,
+        indent="",
+        P=None,
+        style="full",
+        run=None,
+        weighted=False,
+        **kwargs,
+    ):
         """Do any analysis of the output from this step.
 
         Also print important results to the local step.out file using
@@ -211,6 +219,8 @@ class Diffusivity(seamm.Node):
         ----------
         indent: str
             An extra indentation for the output
+        weighted : bool
+            Whether to use the stderr to wieght the fit, default False
         """
         data = {}
 
@@ -263,13 +273,21 @@ class Diffusivity(seamm.Node):
                 # Convert units and remember the factor of 1/6 in the Einstein equation
                 factor = Q_("Å^2/ps").m_as("m^2/s") / 6
                 for i in range(nalpha):
-                    start = 1
-                    slope, err, xs, ys = fit_msd(
-                        self._msd[spec][:, i],
-                        ts,
-                        sigma=self._msd_err[spec][:, i],
-                        start=start,
-                    )
+                    if weighted:
+                        slope, err, xs, ys = fit_msd(
+                            self._msd[spec][:, i],
+                            ts,
+                            sigma=self._msd_err[spec][:, i],
+                            start=P["msd_fit_start"],
+                            end=P["msd_fit_end"],
+                        )
+                    else:
+                        slope, err, xs, ys = fit_msd(
+                            self._msd[spec][:, i],
+                            ts,
+                            start=P["msd_fit_start"],
+                            end=P["msd_fit_end"],
+                        )
                     d_coeff = slope * factor
                     err = err * factor
                     if self._scale is None:
@@ -370,13 +388,21 @@ class Diffusivity(seamm.Node):
                 # Fit the slopes
                 fit = []
                 for i in range(nalpha):
-                    start = 1
-                    slope, err, xs, ys = fit_msd(
-                        self._M[spec][:, i],
-                        ts,
-                        sigma=self._M_err[spec][:, i],
-                        start=start,
-                    )
+                    if weighted:
+                        slope, err, xs, ys = fit_msd(
+                            self._M[spec][:, i],
+                            ts,
+                            sigma=self._M_err[spec][:, i],
+                            start=P["helfand_fit_start"],
+                            end=P["helfand_fit_end"],
+                        )
+                    else:
+                        slope, err, xs, ys = fit_msd(
+                            self._M[spec][:, i],
+                            ts,
+                            start=P["helfand_fit_start"],
+                            end=P["helfand_fit_end"],
+                        )
                     d_coeff = slope
                     err = err
                     if self._scale is None:
@@ -585,15 +611,16 @@ class Diffusivity(seamm.Node):
                 f"Calculate the diffusivity using the {P['approach']} approach, "
                 f"averaging over {P['nruns']} runs.\n\n"
             )
+
+        # Make sure the subflowchart has the data from the parent flowchart
+        self.subflowchart.root_directory = self.flowchart.root_directory
+        self.subflowchart.executor = self.flowchart.executor
+        self.subflowchart.in_jobserver = self.subflowchart.in_jobserver
+
         if not short:
-            # The subflowchart
-            self.subflowchart.root_directory = self.flowchart.root_directory
-
-            # Make sure that the subflowchart has the executor
-            self.subflowchart.executor = self.flowchart.executor
-
             # Get the first real node
             node = self.subflowchart.get_node("1").next()
+            node.all_options = self.all_options
 
             while node is not None:
                 try:
@@ -640,6 +667,9 @@ class Diffusivity(seamm.Node):
 
         # Remember the configuration
         _, self._configuration = self.get_system_configuration()
+        # Reset parameters if called in e.g. loop
+        self._n_molecules = None
+        self._species = None
 
         # Decide what to do
         approach = P["approach"]
@@ -691,6 +721,11 @@ class Diffusivity(seamm.Node):
                 out_handler = handler
                 out_level = out_handler.level
                 out_handler.setLevel(printing.JOB)
+
+        # Make sure the subflowchart has the data from the parent flowchart
+        self.subflowchart.root_directory = self.flowchart.root_directory
+        self.subflowchart.executor = self.flowchart.executor
+        self.subflowchart.in_jobserver = self.subflowchart.in_jobserver
 
         # Get the first real node
         first_node = self.subflowchart.get_node("1").next()
