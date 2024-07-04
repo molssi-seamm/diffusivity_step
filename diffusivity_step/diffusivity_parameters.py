@@ -74,7 +74,7 @@ class DiffusivityParameters(seamm.Parameters):
 
     parameters = {
         "approach": {
-            "default": "Mean Square Displacement (MSD)",
+            "default": "both",
             "kind": "enum",
             "default_units": "",
             "enumeration": (
@@ -87,13 +87,49 @@ class DiffusivityParameters(seamm.Parameters):
             "help_text": "The approach or method for determining the diffusivity.",
         },
         "nruns": {
-            "default": "20",
+            "default": "1",
             "kind": "integer",
             "default_units": "",
             "enumeration": tuple(),
             "format_string": "",
             "description": "Number of runs to average:",
             "help_text": "The number for separate runs to average.",
+        },
+        "msd_fit_start": {
+            "default": "0.1",
+            "kind": "float",
+            "default_units": "",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "Start point of MSD fit (0.0..1.0):",
+            "help_text": "Starting point of fit the MSD this far into the data.",
+        },
+        "msd_fit_end": {
+            "default": "0.8",
+            "kind": "float",
+            "default_units": "",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "End point of MSD fit (0.0..1.0):",
+            "help_text": "End point of fit the MSD this far into the data.",
+        },
+        "helfand_fit_start": {
+            "default": "0.2",
+            "kind": "float",
+            "default_units": "",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "Start point of Helfand fit (0.0..1.0):",
+            "help_text": "Starting point of Helfand fit this far into the data.",
+        },
+        "helfand_fit_end": {
+            "default": "0.95",
+            "kind": "float",
+            "default_units": "",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "End point of Helfand fit (0.0..1.0):",
+            "help_text": "End point of Helfnad fit this far into the data.",
         },
         "errors": {
             "default": "continue to next run",

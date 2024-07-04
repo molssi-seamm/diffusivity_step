@@ -210,7 +210,7 @@ class TkDiffusivity(seamm.TkNode):
         """Layout the widgets in the diffusivity frame
         as needed for the current state"""
 
-        # approach = self["approach"].get()
+        approach = self["approach"].get()
 
         frame = self["diffusivity frame"]
         for slave in frame.grid_slaves():
@@ -224,6 +224,16 @@ class TkDiffusivity(seamm.TkNode):
             self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
             widgets.append(self[key])
             row += 1
+        if approach == "both" or "MSD" in approach:
+            for key in ("msd_fit_start", "msd_fit_end"):
+                self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
+                widgets.append(self[key])
+                row += 1
+        if approach == "both" or "Helfand" in approach:
+            for key in ("helfand_fit_start", "helfand_fit_end"):
+                self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
+                widgets.append(self[key])
+                row += 1
 
         sw.align_labels(widgets, sticky=tk.E)
         frame.columnconfigure(0, minsize=50)
