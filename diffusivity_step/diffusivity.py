@@ -8,6 +8,7 @@ from math import log10, ceil, floor
 from pathlib import Path
 import pkg_resources
 import sys
+import time
 import traceback
 
 import numpy as np
@@ -387,6 +388,8 @@ class Diffusivity(seamm.Node):
             for spec, smiles in enumerate(self.species.keys()):
                 # Fit the slopes
                 fit = []
+                # Convert units and remember the factor of 1/3 in the Einstein equation
+                factor = Q_("Å^2/ps").m_as("m^2/s") / 3
                 for i in range(nalpha):
                     if weighted:
                         slope, err, xs, ys = fit_msd(
@@ -403,8 +406,8 @@ class Diffusivity(seamm.Node):
                             start=P["helfand_fit_start"],
                             end=P["helfand_fit_end"],
                         )
-                    d_coeff = slope
-                    err = err
+                    d_coeff = slope * factor
+                    err = err * factor
                     if self._scale is None:
                         # Set a scale factor to make the numbers managable
                         self._scale = 10 ** floor(log10(d_coeff))
@@ -863,7 +866,10 @@ class Diffusivity(seamm.Node):
 
             metadata, result = read_vector_trajectory(paths[0])
             self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
+            tic = time.perf_counter_ns()
             msd, err = compute_msd(result, species)
+            toc = time.perf_counter_ns()
+            self.logger.info(f"compute_msd: {(toc-tic)/1e+9:.3f}")
             for i in range(n_species):
                 self._msds[i].append(msd[i])
                 self._msd_errs[i].append(err[i])
@@ -902,9 +908,12 @@ class Diffusivity(seamm.Node):
 
             # Convert units and remember the factor of 2 in the Helfand moments
             v_sq = Q_("Å^2/fs^2")
-            constants = (v_sq * self._velocity_dt.units).m_as("m^2/s") / 2
+            constants = (v_sq * self._velocity_dt.to("fs") ** 2).m_as("Å^2") / 2
 
+            tic = time.perf_counter_ns()
             M, err = create_helfand_moments(result, species, m=m)
+            toc = time.perf_counter_ns()
+            self.logger.info(f"create_helfand_moments: {(toc-tic)/1e+9:.3f}")
             for i in range(n_species):
                 M[i] *= constants
                 err[i] *= constants

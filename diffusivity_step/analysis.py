@@ -94,7 +94,7 @@ def create_helfand_moments(v, species, m=None):
 
     n, nmols, _ = v.shape
     if m is None:
-        m = min(n // 20, 10000)
+        m = min(n // 20, 1000)
 
     Ms = []
     M_errs = []
