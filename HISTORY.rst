@@ -1,6 +1,9 @@
 =======
 History
 =======
+2024.7.15 -- Bugfix: Significant error in Helfand Moment approach
+    * Now fixed and seems to be working.
+      
 2024.7.4 -- Improved fitting of curves
     * Removed weighting of the fit by the stdev since it is too biased to the beginning
     * Added control over the portion of the data to fit in order to avoid the initial
