@@ -4,7 +4,7 @@
 """
 
 import logging
-from math import log10, ceil, floor
+from math import log10, ceil, floor, sqrt
 from pathlib import Path
 import pkg_resources
 import sys
@@ -18,7 +18,7 @@ from .analysis import (
     read_vector_trajectory,
     compute_msd,
     add_msd_trace,
-    fit_msd,
+    fit_slope,
     add_helfand_trace,
     create_helfand_moments,
 )
@@ -49,22 +49,33 @@ if path.exists():
     molsystem.add_properties_from_file(csv_file)
 
 
-def fmt_err(value, err, precision=2):
+def fmt_err(value, err, precision=2, as_float=False):
     try:
         decimals = -ceil(log10(err)) + precision
     except Exception:
         e = "--"
         try:
-            v = f"{value:.2f}"
+            v = f"{value:.3f}"
+            if as_float:
+                v = round(float(v), 3)
         except Exception:
             v = value
     else:
         if decimals < 0:
             decimals = 0
-        fmt = f".{decimals}f"
-        e = f"{err:{fmt}}"
+        if as_float:
+            e = round(err, decimals)
+        else:
+            fmt = f".{decimals}f"
+            e = f"{err:{fmt}}"
         try:
-            v = f"{value:{fmt}}"
+            if as_float:
+                if abs(value / e) > 1.0e6:
+                    decimals = 6
+                v = round(float(value), decimals)
+                e = round(float(e), decimals)
+            else:
+                v = f"{value:{fmt}}"
         except Exception:
             v = value
     return v, e
@@ -165,6 +176,7 @@ class Diffusivity(seamm.Node):
         self._msd = None
         self._msd_err = None
         self._scale = None  # Factor to make the results nice numbers
+        self._msd_data = {}
 
         self._use_velocity = False
         self._velocity_dt = None
@@ -172,6 +184,29 @@ class Diffusivity(seamm.Node):
         self._M_errs = None
         self._M = None
         self._M_err = None
+        self._M_coeff = []
+        self._M_stderr = []
+        self._M_data = {}
+
+        self._state = {}
+        self._state_vars = [
+            "T",
+            "T,stderr",
+            "P",
+            "P,stderr",
+            "density",
+            "density,stderr",
+            "a",
+            "a,stderr",
+            "V",
+            "V,stderr",
+        ]
+
+        # Internal statistics
+        self._msd_samples = None
+        self._msd_times = []
+        self._helfand_integral_length = None
+        self._helfand_integral_times = []
 
     @property
     def version(self):
@@ -202,11 +237,10 @@ class Diffusivity(seamm.Node):
             self._species = self.parse_molecules()
         return self._species
 
-    def analyze(
+    def analyze_run(
         self,
         indent="",
         P=None,
-        style="full",
         run=None,
         weighted=False,
         **kwargs,
@@ -221,40 +255,68 @@ class Diffusivity(seamm.Node):
         indent: str
             An extra indentation for the output
         weighted : bool
-            Whether to use the stderr to wieght the fit, default False
+            Whether to use the stderr to weight the fit, default False
         """
-        data = {}
+        # Print useful information about the analysis cost before the first run results
+        if run == 1:
+            if self._msd_samples is not None:
+                text = (
+                    f"The MSD analysis over {self._msd_samples} steps took "
+                    f"{self._msd_times[0]:.3f} seconds."
+                )
+                printer.normal(8 * " " + text)
+            if self._helfand_integral_length is not None:
+                text = (
+                    f"The Helfand moment analysis over {self._helfand_integral_length} "
+                    f"steps took {self._helfand_integral_times[0]:.3f} seconds."
+                )
+                printer.normal(8 * " " + text)
+            printer.normal("")
 
-        if style == "1-line":
-            table = {
-                "Run": [],
-                "Method": [],
-                "Species": [],
-                "Dx": [],
-                "ex": [],
-                "Dy": [],
-                "ey": [],
-                "Dz": [],
-                "ez": [],
-                "D": [],
-                "e": [],
-            }
-        elif style == "full":
-            table = {
-                "Species": [],
-                "Method": [],
-                "Dir": [],
-                "D": [],
-                "±": [],
-                "95%": [],
-                "Units": [],
-            }
+        table = {
+            "Run": [],
+            "Method": [],
+            "Species": [],
+            "Dx": [],
+            "ex": [],
+            "Dy": [],
+            "ey": [],
+            "Dz": [],
+            "ez": [],
+            "D": [],
+            "e": [],
+        }
+        for var in self._state_vars:
+            var = var.replace(",stderr", " ±")
+            table[var] = []
 
         if self._use_msd:
             # Fit the MSD to a line
             nframes, nalpha = self._msd[0].shape
             ts = np.arange(nframes) * self._msd_dt.m_as("ps")  # Scale to ps
             ts = ts.tolist()
+
+            # Set up storage for each run the first time
+            msd_data = self._msd_data
+            if run == 1:
+                # Space for the results from each run. Arrays indexed by smiles & alpha
+                per_run = msd_data["per_run"] = {}
+                for smiles in self.species.keys():
+                    per_run[smiles] = {}
+                    for i in range(nalpha):
+                        per_run[smiles][i] = []
+
+                # Space for the mean and stderr so far
+                mean = msd_data["mean"] = {}
+                stderr = msd_data["stderr"] = {}
+                for smiles in self.species.keys():
+                    mean[smiles] = {}
+                    stderr[smiles] = {}
+                    for i in range(nalpha):
+                        mean[smiles][i] = []
+                        stderr[smiles][i] = []
+                    mean["D"] = []
+                    stderr["D"] = []
 
             # Create the plot for the MSD
             figure = self.create_figure(
@@ -269,13 +331,14 @@ class Diffusivity(seamm.Node):
             x_axis.anchor = y_axis
 
             for spec, smiles in enumerate(self.species.keys()):
+                coeffs = msd_data["per_run"][smiles]
                 # Fit the slopes
                 fit = []
                 # Convert units and remember the factor of 1/6 in the Einstein equation
                 factor = Q_("Å^2/ps").m_as("m^2/s") / 6
                 for i in range(nalpha):
                     if weighted:
-                        slope, err, xs, ys = fit_msd(
+                        slope, err, xs, ys = fit_slope(
                             self._msd[spec][:, i],
                             ts,
                             sigma=self._msd_err[spec][:, i],
@@ -283,7 +346,7 @@ class Diffusivity(seamm.Node):
                             end=P["msd_fit_end"],
                         )
                     else:
-                        slope, err, xs, ys = fit_msd(
+                        slope, err, xs, ys = fit_slope(
                             self._msd[spec][:, i],
                             ts,
                             start=P["msd_fit_start"],
@@ -291,58 +354,67 @@ class Diffusivity(seamm.Node):
                         )
                     d_coeff = slope * factor
                     err = err * factor
+
+                    # Set a scale factor to make the numbers managable
                     if self._scale is None:
-                        # Set a scale factor to make the numbers managable
                         self._scale = 10 ** floor(log10(d_coeff))
-                    v, e = fmt_err(d_coeff / self._scale, 2 * err / self._scale)
+
+                    msd_data["per_run"][smiles][i].append(d_coeff)
+
+                    if run == 1:
+                        v = round(d_coeff / self._scale, 3)
+                        msd_data["mean"][smiles][i].append(v)
+                        msd_data["stderr"][smiles][i].append(None)
+                    else:
+                        coeffs = msd_data["per_run"][smiles][i]
+                        tmp = np.array(coeffs)
+                        mean = float(tmp.mean())
+                        std = float(tmp.std())
+                        stderr = std / sqrt(run - 1)
+                        v_mean, e_mean = fmt_err(
+                            mean / self._scale, 2 * stderr / self._scale, as_float=True
+                        )
+                        v, e = fmt_err(
+                            d_coeff / self._scale,
+                            2 * stderr / self._scale,
+                            as_float=True,
+                        )
+                        msd_data["mean"][smiles][i].append(v_mean)
+                        msd_data["stderr"][smiles][i].append(e_mean)
+
                     fit.append(
                         {
                             "Species": smiles,
                             "D": d_coeff,
-                            "stderr": err,
+                            "Dmean": mean,
+                            "stderr": stderr,
                             "xs": xs,
                             "ys": ys,
                             "scale": self._scale,
                             "D_s": v,
-                            "err_s": e,
                         }
                     )
-                    if style == "1-line":
-                        if i == 0:
-                            if spec == 0:
-                                table["Run"].append(run)
-                                table["Method"].append("MSD")
-                            else:
-                                table["Run"].append("")
-                                table["Method"].append("")
-                            table["Species"].append(smiles)
-                        alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(v)
-                        table["e" + alpha].append(e)
-                    elif style == "full":
-                        table["Species"].append(smiles if i == 0 else "")
-                        table["Method"].append("MSD" if i == 0 else "")
-                        if self._tensor_labels[i][0] == "":
-                            table["Dir"].append("total")
-                            if "D {key} (MSD)" in data:
-                                data["D {key} (MSD)"][smiles] = d_coeff
-                                data["D {key} (MSD), stderr"][smiles] = 2 * err
-                            else:
-                                data["D {key} (MSD)"] = {smiles: d_coeff}
-                                data["D {key} (MSD), stderr"] = {smiles: 2 * err}
+
+                    if i == 0:
+                        if spec == 0:
+                            table["Run"].append(run)
+                            for var in self._state_vars:
+                                value = self._state[var][-1]
+                                if value != "":
+                                    if "density" in var:
+                                        value = round(value, 3)
+                                    else:
+                                        value = round(value, 1)
+                                var = var.replace(",stderr", " ±")
+                                table[var].append(value)
+                            table["Method"].append("MSD")
                         else:
-                            table["Dir"].append(self._tensor_labels[i][0])
-                            key = f"D{self._tensor_labels[i][0]}" + " {key} (MSD)"
-                            if key in data:
-                                data[key][smiles] = d_coeff
-                                data[key + ", stderr"][smiles] = 2 * err
-                            else:
-                                data[key] = {smiles: d_coeff}
-                                data[key + ", stderr"] = {smiles: 2 * err}
-                        table["D"].append(v)
-                        table["±"].append("±")
-                        table["95%"].append(e)
-                        table["Units"].append("m^2/s" if i == 0 else "")
+                            table["Run"].append("")
+                            table["Method"].append("")
+                        table["Species"].append(smiles)
+                    alpha = self._tensor_labels[i][0]
+                    table["D" + alpha].append(v)
+                    table["e" + alpha].append("")
 
                 add_msd_trace(
                     plot,
@@ -351,7 +423,6 @@ class Diffusivity(seamm.Node):
                     smiles,
                     self._msd[spec],
                     ts,
-                    err=self._msd_err[spec] * 2,
                     fit=fit,
                 )
 
@@ -373,6 +444,39 @@ class Diffusivity(seamm.Node):
             ts = np.arange(nframes) * self._velocity_dt.m_as("ps")  # Scale to ps
             ts = ts.tolist()
 
+            # Set up storage for each run the first time
+            M_data = self._M_data
+            if run == 1:
+                # Space for the results from each run. Arrays indexed by smiles & alpha
+                per_run = M_data["per_run"] = {}
+                for smiles in self.species.keys():
+                    per_run[smiles] = {}
+                    for i in range(nalpha):
+                        per_run[smiles][i] = []
+
+                # Space for the mean and stderr so far
+                mean = M_data["mean"] = {}
+                stderr = M_data["stderr"] = {}
+                for smiles in self.species.keys():
+                    mean[smiles] = {}
+                    stderr[smiles] = {}
+                    for i in range(nalpha):
+                        mean[smiles][i] = []
+                        stderr[smiles][i] = []
+                    mean["D"] = []
+                    stderr["D"] = []
+                if self._use_msd:
+                    mean = M_data["combined mean"] = {}
+                    stderr = M_data["combined stderr"] = {}
+                    for smiles in self.species.keys():
+                        mean[smiles] = {}
+                        stderr[smiles] = {}
+                        for i in range(nalpha):
+                            mean[smiles][i] = []
+                            stderr[smiles][i] = []
+                        mean["D"] = []
+                        stderr["D"] = []
+
             # Create the plot for the Helfand moments
             figure = self.create_figure(
                 module_path=("seamm",),
@@ -386,13 +490,14 @@ class Diffusivity(seamm.Node):
             x_axis.anchor = y_axis
 
             for spec, smiles in enumerate(self.species.keys()):
+                coeffs = M_data["per_run"][smiles]
                 # Fit the slopes
                 fit = []
                 # Convert units and remember the factor of 1/3 in the Einstein equation
                 factor = Q_("Å^2/ps").m_as("m^2/s") / 3
                 for i in range(nalpha):
                     if weighted:
-                        slope, err, xs, ys = fit_msd(
+                        slope, err, xs, ys = fit_slope(
                             self._M[spec][:, i],
                             ts,
                             sigma=self._M_err[spec][:, i],
@@ -400,7 +505,7 @@ class Diffusivity(seamm.Node):
                             end=P["helfand_fit_end"],
                         )
                     else:
-                        slope, err, xs, ys = fit_msd(
+                        slope, err, xs, ys = fit_slope(
                             self._M[spec][:, i],
                             ts,
                             start=P["helfand_fit_start"],
@@ -408,10 +513,52 @@ class Diffusivity(seamm.Node):
                         )
                     d_coeff = slope * factor
                     err = err * factor
+
+                    # Set a scale factor to make the numbers managable
                     if self._scale is None:
-                        # Set a scale factor to make the numbers managable
                         self._scale = 10 ** floor(log10(d_coeff))
-                    v, e = fmt_err(d_coeff / self._scale, 2 * err / self._scale)
+
+                    M_data["per_run"][smiles][i].append(d_coeff)
+
+                    if run == 1:
+                        v = f"{d_coeff / self._scale:.2f}"
+                        M_data["mean"][smiles][i].append(float(v))
+                        M_data["stderr"][smiles][i].append(None)
+                    else:
+                        coeffs = M_data["per_run"][smiles][i]
+                        tmp = np.array(coeffs)
+                        mean = float(tmp.mean())
+                        std = float(tmp.std())
+                        stderr = std / sqrt(run - 1)
+                        v_mean, e_mean = fmt_err(
+                            mean / self._scale, 2 * stderr / self._scale, as_float=True
+                        )
+
+                        v, e = fmt_err(
+                            d_coeff / self._scale,
+                            2 * stderr / self._scale,
+                            as_float=True,
+                        )
+                        M_data["mean"][smiles][i].append(v_mean)
+                        M_data["stderr"][smiles][i].append(e_mean)
+
+                    if self._use_msd:
+                        tmp = np.array(
+                            M_data["per_run"][smiles][i]
+                            + msd_data["per_run"][smiles][i]
+                        )
+                        mean = float(tmp.mean())
+                        std = float(tmp.std())
+                        stderr = std / sqrt(2 * run - 1)
+                        v_mean, e_mean = fmt_err(
+                            mean / self._scale,
+                            2 * stderr / self._scale,
+                            as_float=True,
+                        )
+
+                        M_data["combined mean"][smiles][i].append(v_mean)
+                        M_data["combined stderr"][smiles][i].append(e_mean)
+
                     fit.append(
                         {
                             "Species": smiles,
@@ -421,51 +568,32 @@ class Diffusivity(seamm.Node):
                             "ys": ys,
                             "scale": self._scale,
                             "D_s": v,
-                            "err_s": e,
                         }
                     )
-                    if style == "1-line":
-                        if i == 0:
-                            if spec == 0:
-                                if not self._use_msd:
-                                    table["Run"].append(run)
-                                else:
-                                    table["Run"].append("")
-                                table["Method"].append("Helfand Moments")
+
+                    if i == 0:
+                        if spec == 0:
+                            if not self._use_msd:
+                                table["Run"].append(run)
                             else:
                                 table["Run"].append("")
-                                table["Method"].append("")
-                            table["Species"].append(smiles)
-                        alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(v)
-                        table["e" + alpha].append(e)
-                    elif style == "full":
-                        table["Species"].append(smiles if i == 0 else "")
-                        table["Method"].append("Helfand Moments" if i == 0 else "")
-                        if self._tensor_labels[i][0] == "":
-                            table["Dir"].append("total")
+                            for var in self._state_vars:
+                                value = self._state[var][-1]
+                                if value != "":
+                                    if "density" in var:
+                                        value = round(value, 3)
+                                    else:
+                                        value = round(value, 1)
+                                var = var.replace(",stderr", " ±")
+                                table[var].append(value)
+                            table["Method"].append("Helfand Moments")
                         else:
-                            table["Dir"].append(self._tensor_labels[i][0])
-                        table["D"].append(v)
-                        table["±"].append("±")
-                        table["95%"].append(e)
-                        table["Units"].append("m^2/s" if i == 0 else "")
-                        if i == 0:
-                            key = "D {key} (HM)"
-                            if key in data:
-                                data[key][smiles] = d_coeff
-                                data[key + ", stderr"][smiles] = 2 * err
-                            else:
-                                data[key] = {smiles: d_coeff}
-                                data[key + ", stderr"] = {smiles: 2 * err}
-                        else:
-                            key = f"D{self._tensor_labels[i][0]}" + " {key} (HM)"
-                            if key in data:
-                                data[key][smiles] = d_coeff
-                                data[key + ", stderr"][smiles] = 2 * err
-                            else:
-                                data[key] = {smiles: d_coeff}
-                                data[key + ", stderr"] = {smiles: 2 * err}
+                            table["Run"].append("")
+                            table["Method"].append("")
+                        table["Species"].append(smiles)
+                    alpha = self._tensor_labels[i][0]
+                    table["D" + alpha].append(v)
+                    table["e" + alpha].append("")
 
                 add_helfand_trace(
                     plot,
@@ -474,7 +602,6 @@ class Diffusivity(seamm.Node):
                     smiles,
                     self._M[spec],
                     ts,
-                    err=self._M_err[spec] * 2,
                     fit=fit,
                 )
 
@@ -490,72 +617,381 @@ class Diffusivity(seamm.Node):
                 figure.template = "line.html_template"
                 figure.dump(path)
 
-        # Print the table of results
-        if style == "1-line":
-            text = ""
-            tmp = tabulate(
-                table,
-                headers="keys",
-                tablefmt="simple_outline",
-                disable_numparse=True,
-            )
-            if run == 1:
-                length = len(tmp.splitlines()[0])
-                text += "\n"
-                text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(
-                    length
-                )
-                text += "\n"
-                text += "\n".join(tmp.splitlines()[0:-1])
-            else:
-                if self._use_msd and self._use_velocity:
-                    first = -3
-                else:
-                    first = -2
-                first = 3
-                if run is not None and run == P["nruns"]:
-                    text += "\n".join(tmp.splitlines()[first:])
-                else:
-                    text += "\n".join(tmp.splitlines()[first:-1])
+        # Add the current best estimates
+        if run > 1:
+            for spec, smiles in enumerate(self.species.keys()):
+                for i in range(nalpha):
+                    if self._use_msd:
+                        if i == 0:
+                            if spec == 0:
+                                table["Run"].append("")
+                                for var in self._state_vars:
+                                    if ",stderr" in var:
+                                        continue
+                                    tmp = np.array(self._state[var])
+                                    t_mean = float(tmp.mean())
+                                    std = float(tmp.std())
+                                    t_stderr = std / sqrt(run - 1)
+                                    t_v, t_e = fmt_err(
+                                        t_mean, 2 * t_stderr, as_float=True
+                                    )
+                                    table[var].append(t_v)
+                                    table[var + " ±"].append(t_e)
+                                if self._use_velocity:
+                                    table["Method"].append("Current MSD Estimate")
+                                else:
+                                    table["Method"].append("Current Estimate")
+                            else:
+                                table["Run"].append("")
+                                table["Method"].append("")
+                            table["Species"].append(smiles)
 
-            printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
-        else:
-            text = ""
-            tmp = tabulate(
-                table,
-                headers="keys",
-                tablefmt="simple_outline",
-                disable_numparse=True,
-                colalign=(
-                    "center",
-                    "center",
-                    "decimal",
-                    "center",
-                    "decimal",
-                    "left",
-                ),
-            )
+                        mean = msd_data["mean"][smiles][i][-1]
+                        stderr = msd_data["stderr"][smiles][i][-1]
+                        alpha = self._tensor_labels[i][0]
+                        table["D" + alpha].append(mean)
+                        table["e" + alpha].append(stderr)
+                    if self._use_velocity:
+                        if i == 0:
+                            if spec == 0:
+                                table["Run"].append("")
+                                for var in self._state_vars:
+                                    if ",stderr" in var:
+                                        continue
+                                    tmp = np.array(self._state[var])
+                                    t_mean = float(tmp.mean())
+                                    std = float(tmp.std())
+                                    t_stderr = std / sqrt(run - 1)
+                                    t_v, t_e = fmt_err(
+                                        t_mean, 2 * t_stderr, as_float=True
+                                    )
+                                    table[var].append(t_v)
+                                    table[var + " ±"].append(t_e)
+                                if self._use_msd:
+                                    table["Method"].append("Current HM Estimate")
+                                else:
+                                    table["Method"].append("Current Estimate")
+                            else:
+                                table["Run"].append("")
+                                table["Method"].append("")
+                            table["Species"].append(smiles)
+
+                        mean = M_data["mean"][smiles][i][-1]
+                        stderr = M_data["stderr"][smiles][i][-1]
+                        alpha = self._tensor_labels[i][0]
+                        table["D" + alpha].append(mean)
+                        table["e" + alpha].append(stderr)
+                    if self._use_msd and self._use_velocity:
+                        if i == 0:
+                            if spec == 0:
+                                table["Run"].append("")
+                                for var in self._state_vars:
+                                    if ",stderr" in var:
+                                        continue
+                                    tmp = np.array(self._state[var])
+                                    t_mean = float(tmp.mean())
+                                    std = float(tmp.std())
+                                    t_stderr = std / sqrt(run - 1)
+                                    t_v, t_e = fmt_err(
+                                        t_mean, 2 * t_stderr, as_float=True
+                                    )
+                                    table[var].append(t_v)
+                                    table[var + " ±"].append(t_e)
+                                table["Method"].append("Combined Estimate")
+                            else:
+                                table["Run"].append("")
+                                table["Method"].append("")
+                            table["Species"].append(smiles)
+
+                        mean = M_data["combined mean"][smiles][i][-1]
+                        stderr = M_data["combined stderr"][smiles][i][-1]
+                        alpha = self._tensor_labels[i][0]
+                        table["D" + alpha].append(mean)
+                        table["e" + alpha].append(stderr)
+
+        # Print the table of results
+        text = ""
+        tmp = tabulate(
+            table,
+            headers="keys",
+            tablefmt="rounded_outline",
+            disable_numparse=True,
+        )
+        if run == 1:
             length = len(tmp.splitlines()[0])
             text += "\n"
             text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
             text += "\n"
-            text += tmp
-            text += "\n"
-
-            printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
-
-            # And store results, only for the full output at the end
-            ff = self.get_variable("_forcefield")
-            if ff == "OpenKIM":
-                self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+            text += "\n".join(tmp.splitlines()[0:-1])
+        else:
+            first = 3
+            if run is not None and run == P["nruns"]:
+                text += "\n".join(tmp.splitlines()[first:])
             else:
-                # Valence forcefield...
-                self._model = ff.current_forcefield
+                text += "\n".join(tmp.splitlines()[first:-1])
 
-            self.store_results(
-                configuration=self.configuration,
-                data=data,
-            )
+        printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
+
+    def analyze(
+        self,
+        indent="",
+        P=None,
+        run=None,
+        weighted=False,
+        **kwargs,
+    ):
+        """Do any analysis of the output from this run.
+
+        Also print important results to the local step.out file using
+        "printer".
+
+        Parameters
+        ----------
+        indent: str
+            An extra indentation for the output
+        weighted : bool
+            Whether to use the stderr to weight the fit, default False
+        """
+        data = {}
+
+        # Print the final table of results
+        table = {
+            "Species": [],
+            "Method": [],
+            "Dir": [],
+            "D": [],
+            "±": [],
+            "95%": [],
+        }
+        # First, the state variables
+        for var in self._state_vars:
+            if ",stderr" in var:
+                continue
+            n = len(self._state[var])
+            tmp = np.array(self._state[var])
+            if n == 1 or np.allclose(tmp, tmp[0], atol=0.0):
+                t_v = round(self._state[var][0], 3)
+                t_e = ""
+            else:
+                t_mean = float(tmp.mean())
+                std = float(tmp.std())
+                t_stderr = std / sqrt(n - 1)
+                t_v, t_e = fmt_err(t_mean, 2 * t_stderr, as_float=True)
+            table["Species"].append("")
+            table["Method"].append(var)
+            table["Dir"].append("")
+            table["D"].append(t_v)
+            table["95%"].append(t_e)
+            data[var] = t_v
+            try:
+                data[var + ",stderr"] = float(t_e)
+            except ValueError:
+                pass
+            if var == "a":
+                tmp = 1.0 / tmp
+                if n == 1 or np.allclose(tmp, tmp[0], atol=0.0):
+                    t_v = round(1 / self._state[var][0], 4)
+                    t_e = ""
+                else:
+                    t_mean = float(tmp.mean())
+                    std = float(tmp.std())
+                    t_stderr = std / sqrt(n - 1)
+                    t_v, t_e = fmt_err(t_mean, 2 * t_stderr, as_float=True)
+                data["1/L"] = t_v
+                try:
+                    data["1/L,stderr"] = float(t_e)
+                except ValueError:
+                    pass
+                table["Species"].append("")
+                table["Method"].append("1/L")
+                table["Dir"].append("")
+                table["D"].append(t_v)
+                table["95%"].append(t_e)
+
+        # Round to this many decimals to avoid unpleasant roundoff
+        decimals = -ceil(log10(self._scale)) + 6
+
+        if self._use_msd:
+            msd_data = self._msd_data
+            for smiles in self.species.keys():
+                for i in range(4):
+                    v = msd_data["mean"][smiles][i][-1]
+                    e = msd_data["stderr"][smiles][i][-1]
+                    d_coeff = round(v * self._scale, decimals)
+                    if e is not None:
+                        err = round(e * self._scale, decimals)
+                    table["Species"].append(smiles if i == 0 else "")
+                    table["Method"].append("MSD" if i == 0 else "")
+                    if self._tensor_labels[i][0] == "":
+                        table["Dir"].append("total")
+                        if "D {key} (MSD)" in data:
+                            data["D {key} (MSD)"][smiles] = d_coeff
+                            if e is not None:
+                                data["D {key} (MSD),stderr"][smiles] = err
+                        else:
+                            data["D {key} (MSD)"] = {smiles: d_coeff}
+                            if e is not None:
+                                data["D {key} (MSD),stderr"] = {smiles: err}
+                        if "D {key}" in data:
+                            data["D {key}"][smiles] = d_coeff
+                            if e is not None:
+                                data["D {key},stderr"][smiles] = err
+                        else:
+                            data["D {key}"] = {smiles: d_coeff}
+                            if e is not None:
+                                data["D {key},stderr"] = {smiles: err}
+                    else:
+                        table["Dir"].append(self._tensor_labels[i][0])
+                        key = f"D{self._tensor_labels[i][0]}" + " {key} (MSD)"
+                        if key in data:
+                            data[key][smiles] = d_coeff
+                            if e is not None:
+                                data[key + ",stderr"][smiles] = err
+                        else:
+                            data[key] = {smiles: d_coeff}
+                            if e is not None:
+                                data[key + ",stderr"] = {smiles: err}
+                        key = f"D{self._tensor_labels[i][0]}" + " {key}"
+                        if key in data:
+                            data[key][smiles] = d_coeff
+                            if e is not None:
+                                data[key + ",stderr"][smiles] = err
+                        else:
+                            data[key] = {smiles: d_coeff}
+                            if e is not None:
+                                data[key + ",stderr"] = {smiles: err}
+                    table["D"].append(v)
+                    table["±"].append("±")
+                    table["95%"].append(e)
+        if self._use_velocity:
+            M_data = self._M_data
+            for smiles in self.species.keys():
+                for i in range(4):
+                    v = M_data["mean"][smiles][i][-1]
+                    e = M_data["stderr"][smiles][i][-1]
+                    d_coeff = round(v * self._scale, decimals)
+                    if e is not None:
+                        err = round(e * self._scale, decimals)
+                    table["Species"].append(smiles if i == 0 else "")
+                    table["Method"].append("Helfand Moments" if i == 0 else "")
+                    if self._tensor_labels[i][0] == "":
+                        table["Dir"].append("total")
+                        if "D {key} (HM)" in data:
+                            data["D {key} (HM)"][smiles] = d_coeff
+                            if e is not None:
+                                data["D {key} (HM),stderr"][smiles] = err
+                        else:
+                            data["D {key} (HM)"] = {smiles: d_coeff}
+                            if e is not None:
+                                data["D {key} (HM),stderr"] = {smiles: err}
+                        if "D {key}" in data:
+                            data["D {key}"][smiles] = d_coeff
+                            if e is not None:
+                                data["D {key},stderr"][smiles] = err
+                        else:
+                            data["D {key}"] = {smiles: d_coeff}
+                            if e is not None:
+                                data["D {key},stderr"] = {smiles: err}
+                    else:
+                        table["Dir"].append(self._tensor_labels[i][0])
+                        key = f"D{self._tensor_labels[i][0]}" + " {key} (HM)"
+                        if key in data:
+                            data[key][smiles] = d_coeff
+                            if e is not None:
+                                data[key + ",stderr"][smiles] = err
+                        else:
+                            data[key] = {smiles: d_coeff}
+                            if e is not None:
+                                data[key + ",stderr"] = {smiles: err}
+                        key = f"D{self._tensor_labels[i][0]}" + " {key}"
+                        if key in data:
+                            data[key][smiles] = d_coeff
+                            if e is not None:
+                                data[key + ",stderr"][smiles] = err
+                        else:
+                            data[key] = {smiles: d_coeff}
+                            if e is not None:
+                                data[key + ",stderr"] = {smiles: err}
+                    table["D"].append(v)
+                    table["±"].append("±")
+                    table["95%"].append(e)
+        if self._use_msd and self._use_velocity:
+            M_data = self._M_data
+            for smiles in self.species.keys():
+                for i in range(4):
+                    v = M_data["combined mean"][smiles][i][-1]
+                    e = M_data["combined stderr"][smiles][i][-1]
+                    d_coeff = round(v * self._scale, decimals)
+                    if e is not None:
+                        err = round(e * self._scale, decimals)
+                    table["Species"].append(smiles if i == 0 else "")
+                    table["Method"].append("Combined" if i == 0 else "")
+                    if self._tensor_labels[i][0] == "":
+                        table["Dir"].append("total")
+                        if "D {key}" in data:
+                            data["D {key}"][smiles] = d_coeff
+                            if e is not None:
+                                if "D {key},stderr" in data:
+                                    data["D {key},stderr"][smiles] = err
+                                else:
+                                    data["D {key},stderr"] = {smiles: err}
+                        else:
+                            data["D {key}"] = {smiles: d_coeff}
+                            if e is not None:
+                                data["D {key},stderr"] = {smiles: err}
+                    else:
+                        table["Dir"].append(self._tensor_labels[i][0])
+                        key = f"D{self._tensor_labels[i][0]}" + " {key}"
+                        if key in data:
+                            data[key][smiles] = d_coeff
+                            if e is not None:
+                                if key + ",stderr" in data:
+                                    data[key + ",stderr"][smiles] = err
+                                else:
+                                    data[key + ",stderr"] = {smiles: err}
+                        else:
+                            data[key] = {smiles: d_coeff}
+                            if e is not None:
+                                data[key + ",stderr"] = {smiles: err}
+                    table["D"].append(v)
+                    table["±"].append("±")
+                    table["95%"].append(e)
+
+        text = ""
+        tmp = tabulate(
+            table,
+            headers="keys",
+            tablefmt="rounded_outline",
+            disable_numparse=True,
+            colalign=(
+                "center",
+                "center",
+                "center",
+                "decimal",
+                "decimal",
+            ),
+        )
+        length = len(tmp.splitlines()[0])
+        text += "\n"
+        text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
+        text += "\n"
+        text += tmp
+        text += "\n"
+
+        printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
+
+        # And store results, only for the full output at the end
+        ff = self.get_variable("_forcefield")
+        if ff == "OpenKIM":
+            self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+        else:
+            # Valence forcefield...
+            self._model = ff.current_forcefield
+
+        self.store_results(
+            configuration=self.configuration,
+            data=data,
+        )
 
     def create_parser(self):
         """Setup the command-line / config file parser"""
@@ -606,14 +1042,22 @@ class Diffusivity(seamm.Node):
 
         if P["approach"] == "both":
             text = (
-                "Calculate the diffusivity using both the Green-Kubo method and the "
-                f"mean square displacement (MSD), averaging over {P['nruns']} runs.\n\n"
+                "Calculate the diffusivity using both the Helfand moments method and "
+                "the mean square displacement (MSD)"
             )
         else:
-            text = (
-                f"Calculate the diffusivity using the {P['approach']} approach, "
-                f"averaging over {P['nruns']} runs.\n\n"
+            text = f"Calculate the diffusivity using the {P['approach']} approach"
+        text += f", averaging over {P['nruns']} runs."
+
+        if "MSD" not in P["approach"]:
+            text += (
+                "The numerical integral for the Helfand moments will use a maximum of "
+                "{maximum Helfand Integral length} steps. It scales as the square of "
+                "the number of steps in the integration, so becomes expensive for "
+                "sizes."
             )
+
+        text += "\n\n"
 
         # Make sure the subflowchart has the data from the parent flowchart
         self.subflowchart.root_directory = self.flowchart.root_directory
@@ -783,13 +1227,13 @@ class Diffusivity(seamm.Node):
                 else:
                     raise
             else:
-                self.process_run(run, run_dir)
+                self.process_run(run, run_dir, P)
                 if job_handler is not None:
                     job_handler.setLevel(job_level)
                 if out_handler is not None:
                     out_handler.setLevel(out_level)
 
-                self.analyze(P=P, style="1-line", run=run)
+                self.analyze_run(P=P, run=run)
 
                 if job_handler is not None:
                     job_handler.setLevel(printing.JOB)
@@ -837,8 +1281,8 @@ class Diffusivity(seamm.Node):
                 result[smiles].append(molecule)
         return result
 
-    def process_run(self, run, run_dir):
-        """Get the fluxes from the run and do initial processing.
+    def process_run(self, run, run_dir, P=None):
+        """Get the positions and velocities from the run and do initial processing.
 
         Parameters
         ----------
@@ -846,7 +1290,33 @@ class Diffusivity(seamm.Node):
             The run number
         run_dir : pathlib.Path
             The toplevel directory of the run.
+        P : [str: any]
+           Dictionary of control parameters, or default of None in which case the
+           standard parameters are used.
         """
+        if P is None:
+            P = self.parameters.current_values_to_dict(
+                context=seamm.flowchart_variables._data
+            )
+
+        # Get the state variables if saved in e.g. MD run
+        tmp = []
+        for variable in self._state_vars:
+            if self.variable_exists(variable):
+                if variable not in self._state:
+                    self._state[variable] = []
+                self._state[variable].append(self.get_variable(variable))
+                tmp.append(variable)
+                # If they don't have standard errors, we still need space for them
+                if ",stderr" not in variable:
+                    var2 = variable + ",stderr"
+                    if not self.variable_exists(var2):
+                        if var2 not in self._state:
+                            self._state[var2] = []
+                        self._state[var2].append("")
+                        tmp.append(var2)
+        self._state_vars = tmp
+
         n_species = len(self.species)
         if self._use_msd:
             paths = sorted(run_dir.glob("**/com_positions.trj"))
@@ -869,19 +1339,27 @@ class Diffusivity(seamm.Node):
             tic = time.perf_counter_ns()
             msd, err = compute_msd(result, species)
             toc = time.perf_counter_ns()
+            self._msd_times.append((toc - tic) / 1e9)
+            self._msd_samples = result.shape[0]
             self.logger.info(f"compute_msd: {(toc-tic)/1e+9:.3f}")
             for i in range(n_species):
                 self._msds[i].append(msd[i])
                 self._msd_errs[i].append(err[i])
 
-            if run == 1:
+            if True:
+                # Analyze separately
                 self._msd = msd
                 self._msd_err = err
             else:
-                for i in range(n_species):
-                    tmp = np.stack(self._msds[i])
-                    self._msd[i] = np.average(tmp, axis=0)
-                    self._msd_err[i] = np.std(tmp, axis=0)
+                # Average the MSD's then analyze
+                if run == 1:
+                    self._msd = msd
+                    self._msd_err = err
+                else:
+                    for i in range(n_species):
+                        tmp = np.stack(self._msds[i])
+                        self._msd[i] = np.average(tmp, axis=0)
+                        self._msd_err[i] = np.std(tmp, axis=0)
 
         if self._use_velocity:
             paths = sorted(run_dir.glob("**/com_velocities.trj"))
@@ -904,7 +1382,11 @@ class Diffusivity(seamm.Node):
 
             # Limit the lengths of the data
             n = result.shape[0]
-            m = min(n // 10, 10000)
+            if "maximum Helfand Integral length" in P:
+                m = min(n // 2, P["maximum Helfand Integral length"])
+            else:
+                m = min(n // 2, 5000)
+            self._helfand_integral_length = m
 
             # Convert units and remember the factor of 2 in the Helfand moments
             v_sq = Q_("Å^2/fs^2")
@@ -913,6 +1395,7 @@ class Diffusivity(seamm.Node):
             tic = time.perf_counter_ns()
             M, err = create_helfand_moments(result, species, m=m)
             toc = time.perf_counter_ns()
+            self._helfand_integral_times.append((toc - tic) / 1e9)
             self.logger.info(f"create_helfand_moments: {(toc-tic)/1e+9:.3f}")
             for i in range(n_species):
                 M[i] *= constants
@@ -920,14 +1403,20 @@ class Diffusivity(seamm.Node):
                 self._Ms[i].append(M[i])
                 self._M_errs[i].append(err[i])
 
-            if run == 1:
+            if True:
+                # analyze separately
                 self._M = M
                 self._M_err = err
             else:
-                for i in range(n_species):
-                    tmp = np.stack(self._Ms[i])
-                    self._M[i] = np.average(tmp, axis=0)
-                    self._M_err[i] = np.std(tmp, axis=0)
+                # Average the Helfand moments, then analyze
+                if run == 1:
+                    self._M = M
+                    self._M_err = err
+                else:
+                    for i in range(n_species):
+                        tmp = np.stack(self._Ms[i])
+                        self._M[i] = np.average(tmp, axis=0)
+                        self._M_err[i] = np.std(tmp, axis=0)
 
     def set_id(self, node_id=()):
         """Sequentially number the subnodes"""
