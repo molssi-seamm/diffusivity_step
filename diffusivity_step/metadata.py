@@ -132,6 +132,62 @@ units : str
     Optional units for the result. If present, the value should be in these units.
 """
 metadata["results"] = {
+    "T": {
+        "description": "The temperature of the diffusion calculation",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "K",
+    },
+    "T,stderr": {
+        "description": (
+            "The standard error of the temperature of the diffusion calculation"
+        ),
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "K",
+    },
+    "P": {
+        "description": "The pressure of the diffusion calculation",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "atm",
+    },
+    "P,stderr": {
+        "description": (
+            "The standard error of the pressure of the diffusion calculation"
+        ),
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "atm",
+    },
+    "density": {
+        "description": "The density of the diffusion calculation",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "g/mL",
+    },
+    "density,stderr": {
+        "description": (
+            "The standard error of the density of the diffusion calculation"
+        ),
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "g/mL",
+    },
+    "1/L": {
+        "description": "1/length of cell in the diffusion calculation",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "1/Å",
+    },
+    "1/L,stderr": {
+        "description": (
+            "Standard error if 1/length of cell in the diffusion calculation"
+        ),
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "1/Å",
+    },
     "D {key} (MSD)": {
         "description": "The total diffusion coefficient from MSD",
         "dimensionality": "{species: value}",
@@ -139,7 +195,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "D {key} (MSD), stderr": {
+    "D {key} (MSD),stderr": {
         "description": "The standard error of the total diffusion coefficient from MSD",
         "dimensionality": "{species: value}",
         "property": "D,stderr#MSD#{model}",
@@ -153,7 +209,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "Dx {key} (MSD), stderr": {
+    "Dx {key} (MSD),stderr": {
         "description": "The standard error if thediffusion coefficient in x from MSD",
         "dimensionality": "{species: value}",
         "property": "Dx,stderr#MSD#{model}",
@@ -167,7 +223,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "Dy {key} (MSD), stderr": {
+    "Dy {key} (MSD),stderr": {
         "description": "The standard error if thediffusion coefficient in y from MSD",
         "dimensionality": "{species: value}",
         "property": "Dy,stderr#MSD#{model}",
@@ -181,7 +237,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "Dz {key} (MSD), stderr": {
+    "Dz {key} (MSD),stderr": {
         "description": "The standard error if thediffusion coefficient in z from MSD",
         "dimensionality": "{species: value}",
         "property": "Dz,stderr#MSD#{model}",
@@ -195,7 +251,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "D {key} (HM), stderr": {
+    "D {key} (HM),stderr": {
         "description": (
             "The standard error of the total diffusion coefficient from Helfand Moments"
         ),
@@ -211,7 +267,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "Dx {key} (HM), stderr": {
+    "Dx {key} (HM),stderr": {
         "description": (
             "The standard error of the diffusion coefficient in x from Helfand Moments"
         ),
@@ -227,7 +283,7 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "Dy {key} (HM), stderr": {
+    "Dy {key} (HM),stderr": {
         "description": (
             "The standard error of the diffusion coefficient in y from Helfand Moments"
         ),
@@ -243,11 +299,67 @@ metadata["results"] = {
         "type": "float",
         "units": "m^2/s",
     },
-    "Dz {key} (HM), stderr": {
+    "Dz {key} (HM),stderr": {
         "description": (
             "The standard error of the diffusion coefficient in z from Helfand Moments"
         ),
         "property": "Dz,stderr#Helfand Moments#{model}",
+        "dimensionality": "{species: value}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "D {key}": {
+        "description": "The total diffusion coefficient",
+        "dimensionality": "{species: value}",
+        "property": "D#{model}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "D {key},stderr": {
+        "description": ("The standard error of the total diffusion coefficient"),
+        "dimensionality": "{species: value}",
+        "property": "D,stderr#{model}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Dx {key}": {
+        "description": "The diffusion coefficient in x",
+        "dimensionality": "{species: value}",
+        "property": "Dx#{model}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Dx {key},stderr": {
+        "description": ("The standard error of the diffusion coefficient in x"),
+        "property": "Dx,stderr#{model}",
+        "dimensionality": "{species: value}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Dy {key}": {
+        "description": "The diffusion coefficient in y",
+        "dimensionality": "{species: value}",
+        "property": "Dy#{model}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Dy {key},stderr": {
+        "description": ("The standard error of the diffusion coefficient in y"),
+        "property": "Dy,stderr#{model}",
+        "dimensionality": "{species: value}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Dz {key}": {
+        "description": "The diffusion coefficient in z",
+        "dimensionality": "{species: value}",
+        "property": "Dz#{model}",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Dz {key},stderr": {
+        "description": ("The standard error of the diffusion coefficient in z"),
+        "property": "Dz,stderr#{model}",
         "dimensionality": "{species: value}",
         "type": "float",
         "units": "m^2/s",

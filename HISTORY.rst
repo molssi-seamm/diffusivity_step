@@ -1,6 +1,18 @@
 =======
 History
 =======
+2024.7.21 -- Significant improvements!
+    * Simplified error analysis to safe approach of analyzing the diffusion constants
+      over runs.
+    * Improved fitting of the curves to focus on the central linear portion. There are
+      reasonable defaults but the user can adjust as needed.
+    * Provided a combined average and error bars when both the MSF approach and Helfand
+      moments are used.
+    * Capture temperature, pressure, and cell size from the MD step, providing 1/L as a
+      result since the true diffusion constants are found by extrapolating to 1/L = 0.
+    * Provided control over the number of steps for the expensive numerical integration
+      in the Helfand moments, providing a reasonable default of 1000.
+      
 2024.7.15 -- Bugfix: Significant error in Helfand Moment approach
     * Now fixed and seems to be working.
       

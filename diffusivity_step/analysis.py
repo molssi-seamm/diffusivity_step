@@ -94,7 +94,7 @@ def create_helfand_moments(v, species, m=None):
 
     n, nmols, _ = v.shape
     if m is None:
-        m = min(n // 20, 1000)
+        m = min(n // 2, 5000)
 
     Ms = []
     M_errs = []
@@ -129,70 +129,7 @@ def create_helfand_moments(v, species, m=None):
     return Ms, M_errs
 
 
-def fit_helfand_moment(y, xs, sigma=None, start=0.1, end=0.9):
-    """Find the best linear fit.
-
-    Parameters
-    ----------
-    y : [float] or numpy.ndarray()
-        The Helfand moment
-
-    xs : [float]
-        The time (x) coordinate
-
-    sigma : [float] or numpy.ndarray()
-        Optional standard error of y
-
-    start : float
-        Fraction of vector to ignore at the beginning
-
-    end : float
-        The fraction of vector to end at
-
-    Returns
-    -------
-    slope : float
-        The fit slope.
-    stderr : float
-        The 95% standard error of the slope
-    xs : [float]
-        The x values (time) for the fit curve
-    ys : [float]
-        The y values for the fit curve.
-    """
-    # We know the curves curve near the origin, so ignore the first part and last
-    n = len(y)
-    i = int(n * start)
-    j = int(n * end)
-
-    if sigma is None:
-        popt, pcov, infodict, msg, ierr = curve_fit(
-            axb,
-            xs[i:j],
-            y[i:j],
-            full_output=True,
-        )
-    else:
-        popt, pcov, infodict, msg, ierr = curve_fit(
-            axb,
-            xs[i:j],
-            y[i:j],
-            full_output=True,
-            sigma=sigma[i:j],
-            absolute_sigma=True,
-        )
-    slope = float(popt[0])
-    b = float(popt[1])
-    err = float(np.sqrt(np.diag(pcov)[0]))
-
-    ys = []
-    for x in xs[i:j]:
-        ys.append(axb(x, slope, b))
-
-    return slope, err, xs[i:j], ys
-
-
-def fit_msd(y, xs, sigma=None, start=0.1, end=0.9):
+def fit_slope(y, xs, sigma=None, start=0.1, end=0.9):
     """Find the best linear fit to longest possible segment.
 
     Parameters
@@ -295,7 +232,7 @@ def add_helfand_trace(
         label, color, colora = tensor_labels[i]
         if fit is not None:
             hover = (
-                f"{species} D{label} = ({fit[i]['D_s']} ± {fit[i]['err_s']}) * "
+                f"{species} D{label} = {fit[i]['D_s']} * "
                 f"{fit[i]['scale']:.1e} m^2/s"
             )
             plot.add_trace(
@@ -466,7 +403,7 @@ def add_msd_trace(
         label, color, colora = tensor_labels[i]
         if fit is not None:
             hover = (
-                f"{species} D{label} = ({fit[i]['D_s']} ± {fit[i]['err_s']}) * "
+                f"{species} D{label} = {fit[i]['D_s']} * "
                 f"{fit[i]['scale']:.1e} m^2/s"
             )
             plot.add_trace(

@@ -230,7 +230,11 @@ class TkDiffusivity(seamm.TkNode):
                 widgets.append(self[key])
                 row += 1
         if approach == "both" or "Helfand" in approach:
-            for key in ("helfand_fit_start", "helfand_fit_end"):
+            for key in (
+                "maximum Helfand Integral length",
+                "helfand_fit_start",
+                "helfand_fit_end",
+            ):
                 self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
                 widgets.append(self[key])
                 row += 1

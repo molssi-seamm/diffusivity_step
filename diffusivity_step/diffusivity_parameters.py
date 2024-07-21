@@ -87,7 +87,7 @@ class DiffusivityParameters(seamm.Parameters):
             "help_text": "The approach or method for determining the diffusivity.",
         },
         "nruns": {
-            "default": "1",
+            "default": "5",
             "kind": "integer",
             "default_units": "",
             "enumeration": tuple(),
@@ -105,7 +105,7 @@ class DiffusivityParameters(seamm.Parameters):
             "help_text": "Starting point of fit the MSD this far into the data.",
         },
         "msd_fit_end": {
-            "default": "0.8",
+            "default": "0.6",
             "kind": "float",
             "default_units": "",
             "enumeration": tuple(),
@@ -114,7 +114,7 @@ class DiffusivityParameters(seamm.Parameters):
             "help_text": "End point of fit the MSD this far into the data.",
         },
         "helfand_fit_start": {
-            "default": "0.2",
+            "default": "0.35",
             "kind": "float",
             "default_units": "",
             "enumeration": tuple(),
@@ -123,13 +123,22 @@ class DiffusivityParameters(seamm.Parameters):
             "help_text": "Starting point of Helfand fit this far into the data.",
         },
         "helfand_fit_end": {
-            "default": "0.95",
+            "default": "1.00",
             "kind": "float",
             "default_units": "",
             "enumeration": tuple(),
             "format_string": "",
             "description": "End point of Helfand fit (0.0..1.0):",
-            "help_text": "End point of Helfnad fit this far into the data.",
+            "help_text": "End point of Helfand fit this far into the data.",
+        },
+        "maximum Helfand Integral length": {
+            "default": 1000,
+            "kind": "integer",
+            "default_units": "",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "Maximum Helfand Integral length:",
+            "help_text": "Maximum length of the Integral used in the Helfand moments.",
         },
         "errors": {
             "default": "continue to next run",
