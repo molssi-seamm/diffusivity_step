@@ -160,9 +160,10 @@ class TkDiffusivity(seamm.TkNode):
                 self[key] = P[key].widget(frame)
 
         # and binding to change as needed
-        self["approach"].combobox.bind(
-            "<<ComboboxSelected>>", self.reset_diffusivity_frame
-        )
+        for key in ("approach", "hydrodynamic correction"):
+            self[key].combobox.bind(
+                "<<ComboboxSelected>>", self.reset_diffusivity_frame
+            )
 
         # and lay them out
         self.reset_dialog()
@@ -211,6 +212,7 @@ class TkDiffusivity(seamm.TkNode):
         as needed for the current state"""
 
         approach = self["approach"].get()
+        correction = self["hydrodynamic correction"].get()
 
         frame = self["diffusivity frame"]
         for slave in frame.grid_slaves():
@@ -220,7 +222,17 @@ class TkDiffusivity(seamm.TkNode):
 
         # Main controls
         widgets = []
-        for key in ("approach", "nruns", "errors"):
+        widgets2 = []
+        for key in ("approach", "nruns", "hydrodynamic correction"):
+            self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
+            widgets.append(self[key])
+            row += 1
+        if correction != "no":
+            for key in ("viscosity",):
+                self[key].grid(row=row, column=1, sticky=tk.W)
+                widgets2.append(self[key])
+                row += 1
+        for key in ("errors",):
             self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
             widgets.append(self[key])
             row += 1
@@ -239,8 +251,9 @@ class TkDiffusivity(seamm.TkNode):
                 widgets.append(self[key])
                 row += 1
 
-        sw.align_labels(widgets, sticky=tk.E)
-        frame.columnconfigure(0, minsize=50)
+        w1 = sw.align_labels(widgets, sticky=tk.E)
+        w2 = sw.align_labels(widgets2, sticky=tk.E)
+        frame.columnconfigure(0, minsize=w1 - w2 + 30)
 
     def right_click(self, event):
         """
