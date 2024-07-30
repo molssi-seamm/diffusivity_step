@@ -1,6 +1,12 @@
 =======
 History
 =======
+2024.7.30 -- Added optional correction for cell size
+    * Added an option to use the Yeh-Hummer hydrostatic correction for the effects of
+      the finite cell size. The viscosity is required as an input, but the correction
+      eliminates the need to extrapolate to 1/L = 0.
+    * Added control parameters and timings to the available results.
+      
 2024.7.21 -- Significant improvements!
     * Simplified error analysis to safe approach of analyzing the diffusion constants
       over runs.

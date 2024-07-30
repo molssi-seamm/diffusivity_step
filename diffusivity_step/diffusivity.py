@@ -4,6 +4,7 @@
 """
 
 import logging
+import math
 from math import log10, ceil, floor, sqrt
 from pathlib import Path
 import pkg_resources
@@ -169,6 +170,9 @@ class Diffusivity(seamm.Node):
         self._n_molecules = None
         self._species = None  # The molecule indices for each species
 
+        self._state_vars = {}  # The state of the system in the MD
+        self._results = {}  # The results data.
+
         self._use_msd = False
         self._msd_dt = None
         self._msds = None
@@ -189,18 +193,6 @@ class Diffusivity(seamm.Node):
         self._M_data = {}
 
         self._state = {}
-        self._state_vars = [
-            "T",
-            "T,stderr",
-            "P",
-            "P,stderr",
-            "density",
-            "density,stderr",
-            "a",
-            "a,stderr",
-            "V",
-            "V,stderr",
-        ]
 
         # Internal statistics
         self._msd_samples = None
@@ -229,6 +221,11 @@ class Diffusivity(seamm.Node):
     def n_molecules(self):
         """The number of molecules in the system."""
         return self._n_molecules
+
+    @property
+    def results(self):
+        """The results data."""
+        return self._results
 
     @property
     def species(self):
@@ -264,14 +261,41 @@ class Diffusivity(seamm.Node):
                     f"The MSD analysis over {self._msd_samples} steps took "
                     f"{self._msd_times[0]:.3f} seconds."
                 )
-                printer.normal(8 * " " + text)
+                printer.normal(__(text, indent=8 * " "))
             if self._helfand_integral_length is not None:
                 text = (
                     f"The Helfand moment analysis over {self._helfand_integral_length} "
                     f"steps took {self._helfand_integral_times[0]:.3f} seconds."
                 )
-                printer.normal(8 * " " + text)
+                printer.normal(__(text, indent=8 * " "))
             printer.normal("")
+
+        # If requested, calculate the Yeh-Hummer correction for cell size
+        correction = None
+        if P["hydrodynamic correction"]:
+            if "T" in self._state_vars:
+                T = self._state["T"][-1]
+                if "a" in self._state_vars:
+                    L = self._state["a"][-1]
+                else:
+                    L = self._configuration.cell.a
+                L = Q_(L, "Å")
+
+                correction = (
+                    2.837297
+                    * Q_(1.0, "k_B")
+                    * Q_(T, "K")
+                    / (6 * math.pi * P["viscosity"] * L)
+                )
+                correction = float(correction.m_as("m^2/s"))
+            else:
+                if run == 1:
+                    text = (
+                        "\nThe temperature is not available, so cannot calculate the "
+                        "Yeh-Hummer correction. You need to save it to the variable "
+                        "'T' in the molecular dynamics."
+                    )
+                printer.normal(__(text, indent=8 * " "))
 
         table = {
             "Run": [],
@@ -286,10 +310,15 @@ class Diffusivity(seamm.Node):
             "D": [],
             "e": [],
         }
+        if correction is not None:
+            table["Correction"] = []
+
+        # Add state variables at end
         for var in self._state_vars:
             var = var.replace(",stderr", " ±")
             table[var] = []
 
+        # On to the results
         if self._use_msd:
             # Fit the MSD to a line
             nframes, nalpha = self._msd[0].shape
@@ -359,6 +388,12 @@ class Diffusivity(seamm.Node):
                     if self._scale is None:
                         self._scale = 10 ** floor(log10(d_coeff))
 
+                    if correction is not None:
+                        if i < 3:
+                            d_coeff += correction / 3
+                        else:
+                            d_coeff += correction
+
                     msd_data["per_run"][smiles][i].append(d_coeff)
 
                     if run == 1:
@@ -398,6 +433,10 @@ class Diffusivity(seamm.Node):
                     if i == 0:
                         if spec == 0:
                             table["Run"].append(run)
+                            if correction is not None:
+                                table["Correction"].append(
+                                    f"{correction / self._scale:.3f}"
+                                )
                             for var in self._state_vars:
                                 value = self._state[var][-1]
                                 if value != "":
@@ -410,6 +449,8 @@ class Diffusivity(seamm.Node):
                             table["Method"].append("MSD")
                         else:
                             table["Run"].append("")
+                            if correction is not None:
+                                table["Correction"].append("")
                             table["Method"].append("")
                         table["Species"].append(smiles)
                     alpha = self._tensor_labels[i][0]
@@ -517,6 +558,12 @@ class Diffusivity(seamm.Node):
                     # Set a scale factor to make the numbers managable
                     if self._scale is None:
                         self._scale = 10 ** floor(log10(d_coeff))
+
+                    if correction is not None:
+                        if i < 3:
+                            d_coeff += correction / 3
+                        else:
+                            d_coeff += correction
 
                     M_data["per_run"][smiles][i].append(d_coeff)
 
@@ -752,7 +799,6 @@ class Diffusivity(seamm.Node):
         weighted : bool
             Whether to use the stderr to weight the fit, default False
         """
-        data = {}
 
         # Print the final table of results
         table = {
@@ -782,9 +828,9 @@ class Diffusivity(seamm.Node):
             table["Dir"].append("")
             table["D"].append(t_v)
             table["95%"].append(t_e)
-            data[var] = t_v
+            self.results[var] = t_v
             try:
-                data[var + ",stderr"] = float(t_e)
+                self.results[var + ",stderr"] = float(t_e)
             except ValueError:
                 pass
             if var == "a":
@@ -797,9 +843,9 @@ class Diffusivity(seamm.Node):
                     std = float(tmp.std())
                     t_stderr = std / sqrt(n - 1)
                     t_v, t_e = fmt_err(t_mean, 2 * t_stderr, as_float=True)
-                data["1/L"] = t_v
+                self.results["1/L"] = t_v
                 try:
-                    data["1/L,stderr"] = float(t_e)
+                    self.results["1/L,stderr"] = float(t_e)
                 except ValueError:
                     pass
                 table["Species"].append("")
@@ -824,42 +870,42 @@ class Diffusivity(seamm.Node):
                     table["Method"].append("MSD" if i == 0 else "")
                     if self._tensor_labels[i][0] == "":
                         table["Dir"].append("total")
-                        if "D {key} (MSD)" in data:
-                            data["D {key} (MSD)"][smiles] = d_coeff
+                        if "D {key} (MSD)" in self.results:
+                            self.results["D {key} (MSD)"][smiles] = d_coeff
                             if e is not None:
-                                data["D {key} (MSD),stderr"][smiles] = err
+                                self.results["D {key} (MSD),stderr"][smiles] = err
                         else:
-                            data["D {key} (MSD)"] = {smiles: d_coeff}
+                            self.results["D {key} (MSD)"] = {smiles: d_coeff}
                             if e is not None:
-                                data["D {key} (MSD),stderr"] = {smiles: err}
-                        if "D {key}" in data:
-                            data["D {key}"][smiles] = d_coeff
+                                self.results["D {key} (MSD),stderr"] = {smiles: err}
+                        if "D {key}" in self.results:
+                            self.results["D {key}"][smiles] = d_coeff
                             if e is not None:
-                                data["D {key},stderr"][smiles] = err
+                                self.results["D {key},stderr"][smiles] = err
                         else:
-                            data["D {key}"] = {smiles: d_coeff}
+                            self.results["D {key}"] = {smiles: d_coeff}
                             if e is not None:
-                                data["D {key},stderr"] = {smiles: err}
+                                self.results["D {key},stderr"] = {smiles: err}
                     else:
                         table["Dir"].append(self._tensor_labels[i][0])
                         key = f"D{self._tensor_labels[i][0]}" + " {key} (MSD)"
-                        if key in data:
-                            data[key][smiles] = d_coeff
+                        if key in self.results:
+                            self.results[key][smiles] = d_coeff
                             if e is not None:
-                                data[key + ",stderr"][smiles] = err
+                                self.results[key + ",stderr"][smiles] = err
                         else:
-                            data[key] = {smiles: d_coeff}
+                            self.results[key] = {smiles: d_coeff}
                             if e is not None:
-                                data[key + ",stderr"] = {smiles: err}
+                                self.results[key + ",stderr"] = {smiles: err}
                         key = f"D{self._tensor_labels[i][0]}" + " {key}"
-                        if key in data:
-                            data[key][smiles] = d_coeff
+                        if key in self.results:
+                            self.results[key][smiles] = d_coeff
                             if e is not None:
-                                data[key + ",stderr"][smiles] = err
+                                self.results[key + ",stderr"][smiles] = err
                         else:
-                            data[key] = {smiles: d_coeff}
+                            self.results[key] = {smiles: d_coeff}
                             if e is not None:
-                                data[key + ",stderr"] = {smiles: err}
+                                self.results[key + ",stderr"] = {smiles: err}
                     table["D"].append(v)
                     table["±"].append("±")
                     table["95%"].append(e)
@@ -876,42 +922,42 @@ class Diffusivity(seamm.Node):
                     table["Method"].append("Helfand Moments" if i == 0 else "")
                     if self._tensor_labels[i][0] == "":
                         table["Dir"].append("total")
-                        if "D {key} (HM)" in data:
-                            data["D {key} (HM)"][smiles] = d_coeff
+                        if "D {key} (HM)" in self.results:
+                            self.results["D {key} (HM)"][smiles] = d_coeff
                             if e is not None:
-                                data["D {key} (HM),stderr"][smiles] = err
+                                self.results["D {key} (HM),stderr"][smiles] = err
                         else:
-                            data["D {key} (HM)"] = {smiles: d_coeff}
+                            self.results["D {key} (HM)"] = {smiles: d_coeff}
                             if e is not None:
-                                data["D {key} (HM),stderr"] = {smiles: err}
-                        if "D {key}" in data:
-                            data["D {key}"][smiles] = d_coeff
+                                self.results["D {key} (HM),stderr"] = {smiles: err}
+                        if "D {key}" in self.results:
+                            self.results["D {key}"][smiles] = d_coeff
                             if e is not None:
-                                data["D {key},stderr"][smiles] = err
+                                self.results["D {key},stderr"][smiles] = err
                         else:
-                            data["D {key}"] = {smiles: d_coeff}
+                            self.results["D {key}"] = {smiles: d_coeff}
                             if e is not None:
-                                data["D {key},stderr"] = {smiles: err}
+                                self.results["D {key},stderr"] = {smiles: err}
                     else:
                         table["Dir"].append(self._tensor_labels[i][0])
                         key = f"D{self._tensor_labels[i][0]}" + " {key} (HM)"
-                        if key in data:
-                            data[key][smiles] = d_coeff
+                        if key in self.results:
+                            self.results[key][smiles] = d_coeff
                             if e is not None:
-                                data[key + ",stderr"][smiles] = err
+                                self.results[key + ",stderr"][smiles] = err
                         else:
-                            data[key] = {smiles: d_coeff}
+                            self.results[key] = {smiles: d_coeff}
                             if e is not None:
-                                data[key + ",stderr"] = {smiles: err}
+                                self.results[key + ",stderr"] = {smiles: err}
                         key = f"D{self._tensor_labels[i][0]}" + " {key}"
-                        if key in data:
-                            data[key][smiles] = d_coeff
+                        if key in self.results:
+                            self.results[key][smiles] = d_coeff
                             if e is not None:
-                                data[key + ",stderr"][smiles] = err
+                                self.results[key + ",stderr"][smiles] = err
                         else:
-                            data[key] = {smiles: d_coeff}
+                            self.results[key] = {smiles: d_coeff}
                             if e is not None:
-                                data[key + ",stderr"] = {smiles: err}
+                                self.results[key + ",stderr"] = {smiles: err}
                     table["D"].append(v)
                     table["±"].append("±")
                     table["95%"].append(e)
@@ -928,31 +974,31 @@ class Diffusivity(seamm.Node):
                     table["Method"].append("Combined" if i == 0 else "")
                     if self._tensor_labels[i][0] == "":
                         table["Dir"].append("total")
-                        if "D {key}" in data:
-                            data["D {key}"][smiles] = d_coeff
+                        if "D {key}" in self.results:
+                            self.results["D {key}"][smiles] = d_coeff
                             if e is not None:
-                                if "D {key},stderr" in data:
-                                    data["D {key},stderr"][smiles] = err
+                                if "D {key},stderr" in self.results:
+                                    self.results["D {key},stderr"][smiles] = err
                                 else:
-                                    data["D {key},stderr"] = {smiles: err}
+                                    self.results["D {key},stderr"] = {smiles: err}
                         else:
-                            data["D {key}"] = {smiles: d_coeff}
+                            self.results["D {key}"] = {smiles: d_coeff}
                             if e is not None:
-                                data["D {key},stderr"] = {smiles: err}
+                                self.results["D {key},stderr"] = {smiles: err}
                     else:
                         table["Dir"].append(self._tensor_labels[i][0])
                         key = f"D{self._tensor_labels[i][0]}" + " {key}"
-                        if key in data:
-                            data[key][smiles] = d_coeff
+                        if key in self.results:
+                            self.results[key][smiles] = d_coeff
                             if e is not None:
-                                if key + ",stderr" in data:
-                                    data[key + ",stderr"][smiles] = err
+                                if key + ",stderr" in self.results:
+                                    self.results[key + ",stderr"][smiles] = err
                                 else:
-                                    data[key + ",stderr"] = {smiles: err}
+                                    self.results[key + ",stderr"] = {smiles: err}
                         else:
-                            data[key] = {smiles: d_coeff}
+                            self.results[key] = {smiles: d_coeff}
                             if e is not None:
-                                data[key + ",stderr"] = {smiles: err}
+                                self.results[key + ",stderr"] = {smiles: err}
                     table["D"].append(v)
                     table["±"].append("±")
                     table["95%"].append(e)
@@ -990,7 +1036,7 @@ class Diffusivity(seamm.Node):
 
         self.store_results(
             configuration=self.configuration,
-            data=data,
+            data=self.results,
         )
 
     def create_parser(self):
@@ -1049,12 +1095,35 @@ class Diffusivity(seamm.Node):
             text = f"Calculate the diffusivity using the {P['approach']} approach"
         text += f", averaging over {P['nruns']} runs."
 
+        if "Helfand" not in P["approach"]:
+            text += (
+                "The slope of the MSD vs time  will be fit from fraction "
+                f"{P['msd_fit_start']} to {P['msd_fit_end']} of the total "
+                "curve."
+            )
         if "MSD" not in P["approach"]:
             text += (
                 "The numerical integral for the Helfand moments will use a maximum of "
-                "{maximum Helfand Integral length} steps. It scales as the square of "
-                "the number of steps in the integration, so becomes expensive for "
-                "sizes."
+                "{maximum Helfand Integral length} steps. The cost scales as the "
+                "square of the number of steps in the integration, so be cautious "
+                "with large values. "
+                "The slope of the Helfand moment vs time  will be fit from fraction "
+                f"{P['helfand_fit_start']} to {P['helfand_fit_end']} of "
+                "the total curve."
+            )
+
+        correction = P["hydrodynamic correction"]
+        if type(correction) is not bool and self.is_expr(correction):
+            text += (
+                f" The expression '{correction}' will determine whether to use the "
+                "Yeh-Hummer hydrodynamic correction for the finite cell size using "
+                f"a viscosity of {P['viscosity']}."
+            )
+        if type(correction) is bool or "yes" in correction:
+            text += (
+                " The calculated diffusivity will be corrected for the finite cell "
+                "size using the Yeh-Hummer hydrodynamic correction using "
+                f"a viscosity of {P['viscosity']}."
             )
 
         text += "\n\n"
@@ -1119,12 +1188,17 @@ class Diffusivity(seamm.Node):
         self._species = None
 
         # Decide what to do
-        approach = P["approach"]
-        self._use_msd = approach == "both" or "MSD" in approach
-        self._use_velocity = approach == "both" or "Green-Kubo" in approach
+        approach = P["approach"].lower()
+        self._use_msd = approach == "both" or "msd" in approach
+        self._use_velocity = approach == "both" or "helfand" in approach
 
         # Print what we are doing
         printer.important(__(self.description_text(P, short=True), indent=self.indent))
+
+        # Transfer key parameters to results
+        self._results = {}
+        for key, value in P.items():
+            self.results[key] = value
 
         # And the species...
         table = {
@@ -1300,13 +1374,28 @@ class Diffusivity(seamm.Node):
             )
 
         # Get the state variables if saved in e.g. MD run
-        tmp = []
-        for variable in self._state_vars:
+        if run == 1:
+            # Reset any data of the system's state since this is a new calculation
+            self._state = {}
+
+        self._state_vars = []
+        for variable in (
+            "T",
+            "T,stderr",
+            "P",
+            "P,stderr",
+            "density",
+            "density,stderr",
+            "a",
+            "a,stderr",
+            "V",
+            "V,stderr",
+        ):
             if self.variable_exists(variable):
                 if variable not in self._state:
                     self._state[variable] = []
                 self._state[variable].append(self.get_variable(variable))
-                tmp.append(variable)
+                self._state_vars.append(variable)
                 # If they don't have standard errors, we still need space for them
                 if ",stderr" not in variable:
                     var2 = variable + ",stderr"
@@ -1314,11 +1403,11 @@ class Diffusivity(seamm.Node):
                         if var2 not in self._state:
                             self._state[var2] = []
                         self._state[var2].append("")
-                        tmp.append(var2)
-        self._state_vars = tmp
+                        self._state_vars.append(var2)
 
         n_species = len(self.species)
         if self._use_msd:
+            tic = time.perf_counter_ns()
             paths = sorted(run_dir.glob("**/com_positions.trj"))
 
             if len(paths) == 0:
@@ -1336,12 +1425,9 @@ class Diffusivity(seamm.Node):
 
             metadata, result = read_vector_trajectory(paths[0])
             self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
-            tic = time.perf_counter_ns()
             msd, err = compute_msd(result, species)
-            toc = time.perf_counter_ns()
-            self._msd_times.append((toc - tic) / 1e9)
             self._msd_samples = result.shape[0]
-            self.logger.info(f"compute_msd: {(toc-tic)/1e+9:.3f}")
+
             for i in range(n_species):
                 self._msds[i].append(msd[i])
                 self._msd_errs[i].append(err[i])
@@ -1360,8 +1446,17 @@ class Diffusivity(seamm.Node):
                         tmp = np.stack(self._msds[i])
                         self._msd[i] = np.average(tmp, axis=0)
                         self._msd_err[i] = np.std(tmp, axis=0)
+            toc = time.perf_counter_ns()
+            _time = round((toc - tic) / 1e9, 2)
+            self._msd_times.append(_time)
+            if "t_msd" in self.results:
+                self.results["t_msd"] += _time
+            else:
+                self.results["t_msd"] = _time
+            self.logger.info(f"compute_msd: {_time:.3f}")
 
         if self._use_velocity:
+            tic = time.perf_counter_ns()
             paths = sorted(run_dir.glob("**/com_velocities.trj"))
 
             if len(paths) == 0:
@@ -1392,11 +1487,7 @@ class Diffusivity(seamm.Node):
             v_sq = Q_("Å^2/fs^2")
             constants = (v_sq * self._velocity_dt.to("fs") ** 2).m_as("Å^2") / 2
 
-            tic = time.perf_counter_ns()
             M, err = create_helfand_moments(result, species, m=m)
-            toc = time.perf_counter_ns()
-            self._helfand_integral_times.append((toc - tic) / 1e9)
-            self.logger.info(f"create_helfand_moments: {(toc-tic)/1e+9:.3f}")
             for i in range(n_species):
                 M[i] *= constants
                 err[i] *= constants
@@ -1417,6 +1508,14 @@ class Diffusivity(seamm.Node):
                         tmp = np.stack(self._Ms[i])
                         self._M[i] = np.average(tmp, axis=0)
                         self._M_err[i] = np.std(tmp, axis=0)
+            toc = time.perf_counter_ns()
+            _time = round((toc - tic) / 1e9, 3)
+            if "t_hm" in self.results:
+                self.results["t_hm"] += _time
+            else:
+                self.results["t_hm"] = _time
+            self._helfand_integral_times.append(_time)
+            self.logger.info(f"create_helfand_moments: {_time:.3f}")
 
     def set_id(self, node_id=()):
         """Sequentially number the subnodes"""

@@ -95,6 +95,25 @@ class DiffusivityParameters(seamm.Parameters):
             "description": "Number of runs to average:",
             "help_text": "The number for separate runs to average.",
         },
+        "hydrodynamic correction": {
+            "default": "no",
+            "kind": "boolean",
+            "format_string": "s",
+            "enumeration": ("no", "yes"),
+            "description": "Correction for cell size:",
+            "help_text": (
+                "Apply the Yeh-Hummer hydrodynamic correction for the cell size."
+            ),
+        },
+        "viscosity": {
+            "default": "0.0",
+            "kind": "float",
+            "default_units": "cP",
+            "enumeration": tuple(),
+            "format_string": "",
+            "description": "Viscosity:",
+            "help_text": "The viscosity for the Yeh-Hummer cell size correction.",
+        },
         "msd_fit_start": {
             "default": "0.1",
             "kind": "float",

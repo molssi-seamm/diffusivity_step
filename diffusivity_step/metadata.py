@@ -132,6 +132,43 @@ units : str
     Optional units for the result. If present, the value should be in these units.
 """
 metadata["results"] = {
+    # Control parameters
+    "approach": {
+        "description": "Algorithm for diffusion calculation",
+        "dimensionality": "scalar",
+        "type": "string",
+    },
+    "nruns": {
+        "description": "Number of runs to average",
+        "dimensionality": "scalar",
+        "type": "integer",
+    },
+    "msd_fit_start": {
+        "description": "Where to start the fit of the MSD curve",
+        "dimensionality": "scalar",
+        "type": "float",
+    },
+    "msd_fit_end": {
+        "description": "Where to end the fit of the MSD curve",
+        "dimensionality": "scalar",
+        "type": "float",
+    },
+    "helfand_fit_start": {
+        "description": "Where to start the fit of the Helfand moments curve",
+        "dimensionality": "scalar",
+        "type": "float",
+    },
+    "helfand_fit_end": {
+        "description": "Where to end the fit of the Helfand moments curve",
+        "dimensionality": "scalar",
+        "type": "float",
+    },
+    "maximum Helfand Integral length": {
+        "description": "Maximum length of the Helfand numerical integration",
+        "dimensionality": "scalar",
+        "type": "integer",
+    },
+    # Computed results
     "T": {
         "description": "The temperature of the diffusion calculation",
         "dimensionality": "scalar",
@@ -363,5 +400,18 @@ metadata["results"] = {
         "dimensionality": "{species: value}",
         "type": "float",
         "units": "m^2/s",
+    },
+    # Timings
+    "t_msd": {
+        "description": "The time taken in the MSD analysis",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "s",
+    },
+    "t_hm": {
+        "description": "The time taken in the Helfand moments analysis",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "s",
     },
 }
