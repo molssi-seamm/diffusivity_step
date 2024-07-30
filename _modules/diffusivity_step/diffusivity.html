@@ -545,7 +545,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="fmt_err">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.fmt_err">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.fmt_err">[docs]</a>
 <span class="k">def</span> <span class="nf">fmt_err</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">as_float</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">decimals</span> <span class="o">=</span> <span class="o">-</span><span class="n">ceil</span><span class="p">(</span><span class="n">log10</span><span class="p">(</span><span class="n">err</span><span class="p">))</span> <span class="o">+</span> <span class="n">precision</span>
@@ -580,7 +580,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity">[docs]</a>
 <span class="k">class</span> <span class="nc">Diffusivity</span><span class="p">(</span><span class="n">seamm</span><span class="o">.</span><span class="n">Node</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The non-graphical part of a Diffusivity step in a flowchart.</span>
@@ -734,7 +734,7 @@ document.write(`
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_species</span>
 
 <div class="viewcode-block" id="Diffusivity.analyze_run">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.analyze_run">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.analyze_run">[docs]</a>
     <span class="k">def</span> <span class="nf">analyze_run</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">indent</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -1284,7 +1284,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.analyze">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.analyze">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.analyze">[docs]</a>
     <span class="k">def</span> <span class="nf">analyze</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">indent</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -1547,7 +1547,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.create_parser">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.create_parser">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.create_parser">[docs]</a>
     <span class="k">def</span> <span class="nf">create_parser</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup the command-line / config file parser&quot;&quot;&quot;</span>
         <span class="n">parser_name</span> <span class="o">=</span> <span class="s2">&quot;diffusivity-step&quot;</span>
@@ -1579,7 +1579,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.description_text">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.description_text">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.description_text">[docs]</a>
     <span class="k">def</span> <span class="nf">description_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">P</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">short</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the text description of what this step will do.</span>
 <span class="sd">        The dictionary of control values is passed in as P so that</span>
@@ -1676,7 +1676,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.run">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.run">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.run">[docs]</a>
     <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the diffusivity step.</span>
 
@@ -1882,7 +1882,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.parse_molecules">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.parse_molecules">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.parse_molecules">[docs]</a>
     <span class="k">def</span> <span class="nf">parse_molecules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the lists of molecules of each type.</span>
 
@@ -1905,7 +1905,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.process_run">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.process_run">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.process_run">[docs]</a>
     <span class="k">def</span> <span class="nf">process_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">run_dir</span><span class="p">,</span> <span class="n">P</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the positions and velocities from the run and do initial processing.</span>
 
@@ -2070,7 +2070,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.set_id">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.set_id">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.set_id">[docs]</a>
     <span class="k">def</span> <span class="nf">set_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="o">=</span><span class="p">()):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sequentially number the subnodes&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Setting ids for subflowchart </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
@@ -2084,7 +2084,7 @@ document.write(`
 
 
 <div class="viewcode-block" id="Diffusivity.set_subids">
-<a class="viewcode-back" href="../../developer/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.set_subids">[docs]</a>
+<a class="viewcode-back" href="../../api/diffusivity_step.html#diffusivity_step.diffusivity.Diffusivity.set_subids">[docs]</a>
     <span class="k">def</span> <span class="nf">set_subids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="o">=</span><span class="p">()):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the ids of the nodes in the subflowchart&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subflowchart</span><span class="o">.</span><span class="n">reset_visited</span><span class="p">()</span>
