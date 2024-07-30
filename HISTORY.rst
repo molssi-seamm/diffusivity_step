@@ -1,6 +1,12 @@
 =======
 History
 =======
+2024.7.30.1 -- Bugfix: Reinitialization of data in loops
+    * Fixed a bug where the data was not being correctly initialized if the step was in
+      a loop. This caused the timing results to be incorrect.
+    * Added actual number of samples for the MSD and length of the Helfand integral to
+      the results.
+
 2024.7.30 -- Added optional correction for cell size
     * Added an option to use the Yeh-Hummer hydrostatic correction for the effects of
       the finite cell size. The viscosity is required as an input, but the correction
