@@ -257,12 +257,14 @@ class Diffusivity(seamm.Node):
         # Print useful information about the analysis cost before the first run results
         if run == 1:
             if self._msd_samples is not None:
+                self.results["msd samples"] = self._msd_samples
                 text = (
                     f"The MSD analysis over {self._msd_samples} steps took "
                     f"{self._msd_times[0]:.3f} seconds."
                 )
                 printer.normal(__(text, indent=8 * " "))
             if self._helfand_integral_length is not None:
+                self.results["Helfand integral length"] = self._helfand_integral_length
                 text = (
                     f"The Helfand moment analysis over {self._helfand_integral_length} "
                     f"steps took {self._helfand_integral_times[0]:.3f} seconds."
@@ -1183,9 +1185,39 @@ class Diffusivity(seamm.Node):
 
         # Remember the configuration
         _, self._configuration = self.get_system_configuration()
+
         # Reset parameters if called in e.g. loop
         self._n_molecules = None
         self._species = None
+
+        self.state_vars = {}
+        self._results = {}
+
+        self._use_msd = False
+        self._msd_dt = None
+        self._msds = None
+        self._msd_errs = None
+        self._msd = None
+        self._msd_err = None
+        self._scale = None  # Factor to make the results nice numbers
+        self._msd_data = {}
+
+        self._use_velocity = False
+        self._velocity_dt = None
+        self._Ms = None
+        self._M_errs = None
+        self._M = None
+        self._M_err = None
+        self._M_coeff = []
+        self._M_stderr = []
+        self._M_data = {}
+
+        self._state = {}
+
+        self._msd_samples = None
+        self._msd_times = []
+        self._helfand_integral_length = None
+        self._helfand_integral_times = []
 
         # Decide what to do
         approach = P["approach"].lower()

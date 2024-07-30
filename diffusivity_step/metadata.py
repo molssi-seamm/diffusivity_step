@@ -153,6 +153,11 @@ metadata["results"] = {
         "dimensionality": "scalar",
         "type": "float",
     },
+    "msd samples": {
+        "description": "Number of samples to take for the MSD calculation",
+        "dimensionality": "scalar",
+        "type": "float",
+    },
     "helfand_fit_start": {
         "description": "Where to start the fit of the Helfand moments curve",
         "dimensionality": "scalar",
@@ -163,8 +168,8 @@ metadata["results"] = {
         "dimensionality": "scalar",
         "type": "float",
     },
-    "maximum Helfand Integral length": {
-        "description": "Maximum length of the Helfand numerical integration",
+    "Helfand integral length": {
+        "description": "The length of the Helfand numerical integration",
         "dimensionality": "scalar",
         "type": "integer",
     },
