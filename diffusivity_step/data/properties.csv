@@ -1,25 +1,25 @@
 Property,Type,Units,Description,URL
-D#MSD#{model},float,m^2/s,"The total diffusion coefficient from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"D,stderr#MSD#{model}",float,m^2/s,"The standard error of the total diffusion coefficient from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dx#MSD#{model},float,m^2/s,"The diffusion coefficient in x from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dx,stderr#MSD#{model}",float,m^2/s,"The standard error of the diffusion coefficient in x from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dy#MSD#{model},float,m^2/s,"The diffusion coefficient in y from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dy,stderr#MSD#{model}",float,m^2/s,"The standard error of the diffusion coefficient in y from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dz#MSD#{model},float,m^2/s,"The diffusion coefficient in z from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dz,stderr#MSD#{model}",float,m^2/s,"The standard error of the diffusion coefficient in z from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-D#Helfand Moments#{model},float,m^2/s,"The total diffusion coefficient from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"D,stderr#Helfand Moments#{model}",float,m^2/s,"The stadnard error of the total diffusion coefficient from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dx#Helfand Moments#{model},float,m^2/s,"The diffusion coefficient in x from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dx,stderr#Helfand Moments#{model}",float,m^2/s,"The standard error of the diffusion coefficient in x from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dy#Helfand Moments#{model},float,m^2/s,"The diffusion coefficient in y from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dy,stderr#Helfand Moments#{model}",float,m^2/s,"The standard error of the diffusion coefficient in y from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dz#Helfand Moments#{model},float,m^2/s,"The diffusion coefficient in z from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dz,stderr#Helfand Moments#{model}",float,m^2/s,"The standard error of the diffusion coefficient in z from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-D#{model},float,m^2/s,"The total diffusion coefficient using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"D,stderr#{model}",float,m^2/s,"The stadnard error of the total diffusion coefficient using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dx#{model},float,m^2/s,"The diffusion coefficient in x using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dx,stderr#{model}",float,m^2/s,"The standard error of the diffusion coefficient in x using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dy#{model},float,m^2/s,"The diffusion coefficient in y using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dy,stderr#{model}",float,m^2/s,"The standard error of the diffusion coefficient in y using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-Dz#{model},float,m^2/s,"The diffusion coefficient in z using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
-"Dz,stderr#{model}",float,m^2/s,"The standard error of the diffusion coefficient in z using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+D#MSD#{model},json,m^2/s,"The total diffusion coefficient from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"D,stderr#MSD#{model}",json,m^2/s,"The standard error of the total diffusion coefficient from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dx#MSD#{model},json,m^2/s,"The diffusion coefficient in x from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dx,stderr#MSD#{model}",json,m^2/s,"The standard error of the diffusion coefficient in x from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dy#MSD#{model},json,m^2/s,"The diffusion coefficient in y from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dy,stderr#MSD#{model}",json,m^2/s,"The standard error of the diffusion coefficient in y from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dz#MSD#{model},json,m^2/s,"The diffusion coefficient in z from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dz,stderr#MSD#{model}",json,m^2/s,"The standard error of the diffusion coefficient in z from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+D#Helfand Moments#{model},json,m^2/s,"The total diffusion coefficient from MSD using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"D,stderr#Helfand Moments#{model}",json,m^2/s,"The stadnard error of the total diffusion coefficient from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dx#Helfand Moments#{model},json,m^2/s,"The diffusion coefficient in x from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dx,stderr#Helfand Moments#{model}",json,m^2/s,"The standard error of the diffusion coefficient in x from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dy#Helfand Moments#{model},json,m^2/s,"The diffusion coefficient in y from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dy,stderr#Helfand Moments#{model}",json,m^2/s,"The standard error of the diffusion coefficient in y from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dz#Helfand Moments#{model},json,m^2/s,"The diffusion coefficient in z from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dz,stderr#Helfand Moments#{model}",json,m^2/s,"The standard error of the diffusion coefficient in z from Helfand Moments using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+D#{model},json,m^2/s,"The total diffusion coefficient using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"D,stderr#{model}",json,m^2/s,"The stadnard error of the total diffusion coefficient using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dx#{model},json,m^2/s,"The diffusion coefficient in x using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dx,stderr#{model}",json,m^2/s,"The standard error of the diffusion coefficient in x using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dy#{model},json,m^2/s,"The diffusion coefficient in y using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dy,stderr#{model}",json,m^2/s,"The standard error of the diffusion coefficient in y using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+Dz#{model},json,m^2/s,"The diffusion coefficient in z using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"Dz,stderr#{model}",json,m^2/s,"The standard error of the diffusion coefficient in z using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity

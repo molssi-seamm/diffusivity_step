@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Non-graphical part of the Diffusivity step in a SEAMM flowchart
-"""
+"""Non-graphical part of the Diffusivity step in a SEAMM flowchart"""
 
 import logging
 import math
@@ -1005,6 +1004,31 @@ class Diffusivity(seamm.Node):
                     table["±"].append("±")
                     table["95%"].append(e)
 
+        # If requested, calculate the Yeh-Hummer correction for cell size
+        correction = None
+        if P["hydrodynamic correction"]:
+            if "T" in self._state_vars:
+                T = self._state["T"][-1]
+                if "a" in self._state_vars:
+                    L = self._state["a"][-1]
+                else:
+                    L = self._configuration.cell.a
+                L = Q_(L, "Å")
+
+                correction = (
+                    2.837297
+                    * Q_(1.0, "k_B")
+                    * Q_(T, "K")
+                    / (6 * math.pi * P["viscosity"] * L)
+                )
+                correction = float(correction.m_as("m^2/s"))
+                table["Species"].append("")
+                table["Method"].append("Correction")
+                table["Dir"].append("")
+                table["D"].append(correction)
+                table["±"].append("")
+                table["95%"].append("")
+
         text = ""
         tmp = tabulate(
             table,
@@ -1115,18 +1139,22 @@ class Diffusivity(seamm.Node):
             )
 
         correction = P["hydrodynamic correction"]
-        if type(correction) is not bool and self.is_expr(correction):
+
+        if isinstance(correction, str) and self.is_expr(correction):
             text += (
                 f" The expression '{correction}' will determine whether to use the "
                 "Yeh-Hummer hydrodynamic correction for the finite cell size using "
                 f"a viscosity of {P['viscosity']}."
             )
-        if type(correction) is bool or "yes" in correction:
-            text += (
-                " The calculated diffusivity will be corrected for the finite cell "
-                "size using the Yeh-Hummer hydrodynamic correction using "
-                f"a viscosity of {P['viscosity']}."
-            )
+        else:
+            if isinstance(correction, str):
+                correction = "yes" in correction
+            if correction:
+                text += (
+                    " The calculated diffusivity will be corrected for the finite cell "
+                    "size using the Yeh-Hummer hydrodynamic correction using "
+                    f"a viscosity of {P['viscosity']}."
+                )
 
         text += "\n\n"
 
