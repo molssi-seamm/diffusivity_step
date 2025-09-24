@@ -1,6 +1,8 @@
 =======
 History
 =======
+2025.9.23 -- Bugfix: Fixed error storing diffusion constants as properties
+
 2024.7.30.1 -- Bugfix: Reinitialization of data in loops
     * Fixed a bug where the data was not being correctly initialized if the step was in
       a loop. This caused the timing results to be incorrect.
