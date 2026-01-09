@@ -15,6 +15,7 @@ import numpy as np
 from tabulate import tabulate
 
 from .analysis import (
+    read_dump_trajectory,
     read_vector_trajectory,
     compute_msd,
     add_msd_trace,
@@ -1471,10 +1472,18 @@ class Diffusivity(seamm.Node):
             paths = sorted(run_dir.glob("**/com_positions.trj"))
 
             if len(paths) == 0:
-                raise RuntimeError(f"There is no com position data for run {run}.")
-            elif len(paths) > 1:
+                # See if there are atom positions?
+                paths = sorted(run_dir.glob("**/atomic_positions.dump_trj"))
+                if len(paths) == 0:
+                    raise RuntimeError(f"There is no position data for run {run}.")
+                else:
+                    trj_type = "dump"
+            else:
+                trj_type = "vector"
+
+            if len(paths) > 1:
                 raise NotImplementedError(
-                    f"Cannot handle multiple com position files from run {run}."
+                    f"Cannot handle multiple position files from run {run}."
                 )
 
             species = [x for x in self.species.values()]
@@ -1483,8 +1492,12 @@ class Diffusivity(seamm.Node):
                 self._msds = [[] for i in range(n_species)]
                 self._msd_errs = [[] for i in range(n_species)]
 
-            metadata, result = read_vector_trajectory(paths[0])
+            if trj_type == "vector":
+                metadata, result = read_vector_trajectory(paths[0])
+            else:
+                metadata, result = read_dump_trajectory(paths[0])
             self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
+
             msd, err = compute_msd(result, species)
             self._msd_samples = result.shape[0]
 

@@ -1,6 +1,11 @@
 =======
 History
 =======
+2026.1.8 -- Enhancement to use atomic position and velocity trajectories
+    * Add support for the atomic position and velocity trajectories for
+      forcefields/potentials such as EAM/MEAM where there are no bonds, and hence the
+      center-of-mass trajectories used from molecules are not allowed by LAMMPS.
+
 2025.9.23 -- Bugfix: Fixed error storing diffusion constants as properties
 
 2024.7.30.1 -- Bugfix: Reinitialization of data in loops

@@ -528,6 +528,78 @@ def plot_msd(figure, msd, ts, err=None, fit=None, labels=tensor_labels):
     return plot
 
 
+def read_dump_trajectory(path):
+    """Read a standard dump-style trajectory from LAMMPS.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        The file as a string or path-like object.
+
+    Note
+    ----
+    Data looks like this::
+
+        ITEM: TIMESTEP
+        0
+        ITEM: NUMBER OF ATOMS
+        256
+        ITEM: BOX BOUNDS pp pp pp
+        0.0000000000000000e+00 1.5900375866964442e+01
+        0.0000000000000000e+00 1.5900375866964442e+01
+        0.0000000000000000e+00 1.5900375866964442e+01
+        ITEM: ATOMS id xu yu zu
+        1 20.0993 14.7149 -5.20836
+        2 8.78739 12.8425 -25.9197
+        ...
+
+    This is repeated for each timestep.
+    """
+    timesteps = []
+    times = []
+    units = None
+    data = []
+    with open(path) as fd:
+        lines = iter(fd)
+
+        for line in lines:
+            if line.startswith("ITEM:"):
+                if "TIMESTEP" in line:
+                    timesteps.append(int(next(lines)))
+                elif "TIME" in line:
+                    times.append(float(next(lines)))
+                elif "UNITS" in line:
+                    units = next(lines).strip()
+                elif "NUMBER OF ATOMS" in line:
+                    n_atoms = int(next(lines))
+                elif "BOX BOUNDS" in line:
+                    cell = []
+                    for _ in range(3):
+                        x0, x1 = next(lines).split()
+                        cell.append(float(x1) - float(x0))
+                    cell.extend([90.0, 90.0, 90.0])
+                elif "ATOMS" in line:
+                    frame = []
+                    for _ in range(n_atoms):
+                        atno, x, y, z = next(lines).split()
+                        frame.append([float(x), float(y), float(z)])
+                    data.append(frame)
+    result = np.array(data)
+    metadata = {"timesteps": timesteps}
+    if len(times) > 0:
+        metadata["times"] = times
+        metadata["dt"] = times[1] - times[0]
+        if units is None:
+            metadata["tunits"] = "fs"
+        else:
+            if units.lower() == "metal":
+                metadata["tunits"] = "ps"
+            else:
+                metadata["tunits"] = "fs"
+
+    return metadata, result
+
+
 def read_vector_trajectory(path):
     """Read a standard vector trajectory from LAMMPS fix vector.
 
