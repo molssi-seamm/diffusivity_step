@@ -1,0 +1,1464 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>diffusivity_step package &#8212; SEAMM Diffusivity Plug-in 2026.1.8 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=c224919a" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=9a85a340"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'developer/diffusivity_step';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="2026.1.8" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/SEAMM logo.png" class="logo__image only-light" alt=""/>
+    <img src="../_static/SEAMM Inverted 288x181.png" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">Diffusivity</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide/index.html">
+    Developer Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Documentation
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../authors.html">
+    Development Team
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../history.html">
+    History
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://molssi-seamm.github.io">
+    Main SEAMM documentation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://molssi-seamm.github.io">
+    SEAMM Documentation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://molssi.org">
+    MolSSI
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/molssi-seamm/geometry_analysis_step" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/MolSSI_NSF" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-twitter fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../developer_guide/index.html">
+    Developer Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../authors.html">
+    Development Team
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../history.html">
+    History
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://molssi-seamm.github.io">
+    Main SEAMM documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://molssi-seamm.github.io">
+    SEAMM Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://molssi.org">
+    MolSSI
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/molssi-seamm/geometry_analysis_step" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/MolSSI_NSF" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-twitter fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Twitter</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">diffusivity_step package</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="diffusivity-step-package">
+<h1>diffusivity_step package<a class="headerlink" href="#diffusivity-step-package" title="Link to this heading">#</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">#</a></h2>
+</section>
+<section id="module-diffusivity_step.analysis">
+<span id="diffusivity-step-analysis-module"></span><h2>diffusivity_step.analysis module<a class="headerlink" href="#module-diffusivity_step.analysis" title="Link to this heading">#</a></h2>
+<p>Routines to help do the analysis for diffusivity.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.add_helfand_trace">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">add_helfand_trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">err</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[('x',</span> <span class="pre">'red',</span> <span class="pre">'rgba(255,0,0,0.1)'),</span> <span class="pre">('y',</span> <span class="pre">'green',</span> <span class="pre">'rgba(0,255,0,0.1)'),</span> <span class="pre">('z',</span> <span class="pre">'blue',</span> <span class="pre">'rgba(0,0,255,0.1)'),</span> <span class="pre">('',</span> <span class="pre">'black',</span> <span class="pre">'rgba(0,0,0,0.1)')]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#add_helfand_trace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.add_helfand_trace" title="Link to this definition">#</a></dt>
+<dd><p>Add a trace for the Helfand moments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>plot</strong> (<em>seamm_util.plot</em>) – The plot that contains the traces</p></li>
+<li><p><strong>x_axis</strong> – The x axis for the plot</p></li>
+<li><p><strong>y_axis</strong> – The y axis for the plot</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – The label for the species</p></li>
+<li><p><strong>M</strong> (<em>numpy.mdarray</em><em>(</em><em>m</em><em>, </em><em>3</em><em>)</em>) – The Helfand moments, in m^2</p></li>
+<li><p><strong>ts</strong> (<em>[</em><em>float</em><em>]</em>) – The times associated with the moments, in ps</p></li>
+<li><p><strong>err</strong> (<em>numpy.mdarray</em><em>(</em><em>n</em><em>, </em><em>3</em><em> or </em><em>4</em><em>)</em>) – The std error on the moments</p></li>
+<li><p><strong>fit</strong> (<em>{str: any}</em>) – The information for the fit to the curve</p></li>
+<li><p><strong>labels</strong> (<em>{str: xxx}</em>) – The labels for the directions</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.add_msd_trace">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">add_msd_trace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">err</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[('x',</span> <span class="pre">'red',</span> <span class="pre">'rgba(255,0,0,0.1)'),</span> <span class="pre">('y',</span> <span class="pre">'green',</span> <span class="pre">'rgba(0,255,0,0.1)'),</span> <span class="pre">('z',</span> <span class="pre">'blue',</span> <span class="pre">'rgba(0,0,255,0.1)'),</span> <span class="pre">('',</span> <span class="pre">'black',</span> <span class="pre">'rgba(0,0,0,0.1)')]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#add_msd_trace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.add_msd_trace" title="Link to this definition">#</a></dt>
+<dd><p>Add a trace to the mean square deviation (MSD) plot.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>plot</strong> (<em>seamm_util.plot</em>) – The plot that contains the traces</p></li>
+<li><p><strong>x_axis</strong> – The x axis for the plot</p></li>
+<li><p><strong>y_axis</strong> – The y axis for the plot</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – The label for the species</p></li>
+<li><p><strong>msd</strong> (<em>numpy.mdarray</em><em>(</em><em>n</em><em>, </em><em>3</em><em> or </em><em>4</em><em>)</em>) – The MSD in x, y, and z, and optionally the average</p></li>
+<li><p><strong>ts</strong> (<em>[</em><em>float</em><em>]</em>) – The times associated with the MSD, in ps</p></li>
+<li><p><strong>err</strong> (<em>numpy.mdarray</em><em>(</em><em>n</em><em>, </em><em>3</em><em> or </em><em>4</em><em>)</em>) – The std error on the msd values</p></li>
+<li><p><strong>fit</strong> (<em>{str: any}</em>) – The information for the fit to the curve</p></li>
+<li><p><strong>labels</strong> (<em>{str: xxx}</em>) – The labels for the directions</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.axb">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">axb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#axb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.axb" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.compute_msd">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">compute_msd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xyz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">average</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#compute_msd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.compute_msd" title="Link to this definition">#</a></dt>
+<dd><p>Compute the mean square displacement vector, averaging over molecules.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xyz</strong> (<em>numpy.ndarray</em><em>(</em><em>nsteps</em><em>, </em><em>nmolecules</em><em>, </em><em>3</em><em>)</em>) – The coordinates at each step</p></li>
+<li><p><strong>species</strong> (<em>[</em><em>[</em><em>int</em><em>]</em><em>] or </em><em>numpy.ndarray</em>) – Indices of the molecules for each species</p></li>
+<li><p><strong>average</strong> (<em>bool = True</em>) – Whether to return the average MSD as well as x, y, and z components.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>[numpy.ndarray(nsteps, 3 or 4)] * nspecies</em> – The MSD plus the average MSD if &lt;average&gt; == True, as a list over species</p></li>
+<li><p><em>[numpy.ndarray(nsteps, 3 or 4)] * nspeceis</em> – The error of the MSD</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.create_helfand_moments">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">create_helfand_moments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#create_helfand_moments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.create_helfand_moments" title="Link to this definition">#</a></dt>
+<dd><p>Create the Helfand moments from velocities</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>v</strong> (<em>numpy.ndarray</em><em>(</em><em>nframes</em><em>, </em><em>nmols</em><em>, </em><em>3</em><em>)</em>) – The heat fluxes in x, y, and z</p></li>
+<li><p><strong>species</strong> (<em>[</em><em>[</em><em>int</em><em>]</em><em>] or </em><em>numpy.ndarray</em>) – Indices of the molecules for each species</p></li>
+<li><p><strong>m</strong> (<em>int</em>) – The length of the Helfand moments wanted</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Helfand moments</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>[numpy.ndarray(m, 3)] * nspecies</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.fit_slope">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">fit_slope</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.9</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#fit_slope"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.fit_slope" title="Link to this definition">#</a></dt>
+<dd><p>Find the best linear fit to longest possible segment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y</strong> (<em>[</em><em>float</em><em>] or </em><em>numpy.ndarray</em><em>(</em><em>)</em>) – The MSD</p></li>
+<li><p><strong>xs</strong> (<em>[</em><em>float</em><em>]</em>) – The time (x) coordinate</p></li>
+<li><p><strong>sigma</strong> (<em>[</em><em>float</em><em>] or </em><em>numpy.ndarray</em><em>(</em><em>)</em>) – Optional standard error of y</p></li>
+<li><p><strong>start</strong> (<em>float</em>) – Fraction of vector to ignore at the beginning</p></li>
+<li><p><strong>end</strong> (<em>float</em>) – The fraction of vector to end at</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>slope</strong> (<em>float</em>) – The fit slope.</p></li>
+<li><p><strong>stderr</strong> (<em>float</em>) – The 95% standard error of the slope</p></li>
+<li><p><strong>xs</strong> (<em>[float]</em>) – The x values (time) for the fit curve</p></li>
+<li><p><strong>ys</strong> (<em>[float]</em>) – The y values for the fit curve.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.plot_helfand_moments">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">plot_helfand_moments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">figure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">err</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[('x',</span> <span class="pre">'red',</span> <span class="pre">'rgba(255,0,0,0.1)'),</span> <span class="pre">('y',</span> <span class="pre">'green',</span> <span class="pre">'rgba(0,255,0,0.1)'),</span> <span class="pre">('z',</span> <span class="pre">'blue',</span> <span class="pre">'rgba(0,0,255,0.1)'),</span> <span class="pre">('',</span> <span class="pre">'black',</span> <span class="pre">'rgba(0,0,0,0.1)')]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#plot_helfand_moments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.plot_helfand_moments" title="Link to this definition">#</a></dt>
+<dd><p>Create a plot for the Helfand moments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>figure</strong> (<em>seamm_util.Figure</em>) – The figure that contains the plots.</p></li>
+<li><p><strong>M</strong> (<em>numpy.mdarray</em><em>(</em><em>m</em><em>, </em><em>3</em><em>)</em>) – The Helfand moments, in m^2</p></li>
+<li><p><strong>ts</strong> (<em>[</em><em>float</em><em>]</em>) – The times associated with the moments, in ps</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.plot_msd">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">plot_msd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">figure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">msd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">err</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[('x',</span> <span class="pre">'red',</span> <span class="pre">'rgba(255,0,0,0.1)'),</span> <span class="pre">('y',</span> <span class="pre">'green',</span> <span class="pre">'rgba(0,255,0,0.1)'),</span> <span class="pre">('z',</span> <span class="pre">'blue',</span> <span class="pre">'rgba(0,0,255,0.1)'),</span> <span class="pre">('',</span> <span class="pre">'black',</span> <span class="pre">'rgba(0,0,0,0.1)')]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#plot_msd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.plot_msd" title="Link to this definition">#</a></dt>
+<dd><p>Create a plot for the mean square deviation (MSD).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>figure</strong> (<em>seamm_util.Figure</em>) – The figure that contains the plots.</p></li>
+<li><p><strong>msd</strong> (<em>numpy.mdarray</em><em>(</em><em>n</em><em>, </em><em>3</em><em> or </em><em>4</em><em>)</em>) – The MSD in x, y, and z, and optionally the average</p></li>
+<li><p><strong>ts</strong> (<em>[</em><em>float</em><em>]</em>) – The times associated with the MSD, in ps</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.read_dump_trajectory">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">read_dump_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#read_dump_trajectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.read_dump_trajectory" title="Link to this definition">#</a></dt>
+<dd><p>Read a standard dump-style trajectory from LAMMPS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>pathlib.Path</em>) – The file as a string or path-like object.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Data looks like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ITEM</span><span class="p">:</span> <span class="n">TIMESTEP</span>
+<span class="mi">0</span>
+<span class="n">ITEM</span><span class="p">:</span> <span class="n">NUMBER</span> <span class="n">OF</span> <span class="n">ATOMS</span>
+<span class="mi">256</span>
+<span class="n">ITEM</span><span class="p">:</span> <span class="n">BOX</span> <span class="n">BOUNDS</span> <span class="n">pp</span> <span class="n">pp</span> <span class="n">pp</span>
+<span class="mf">0.0000000000000000e+00</span> <span class="mf">1.5900375866964442e+01</span>
+<span class="mf">0.0000000000000000e+00</span> <span class="mf">1.5900375866964442e+01</span>
+<span class="mf">0.0000000000000000e+00</span> <span class="mf">1.5900375866964442e+01</span>
+<span class="n">ITEM</span><span class="p">:</span> <span class="n">ATOMS</span> <span class="nb">id</span> <span class="n">xu</span> <span class="n">yu</span> <span class="n">zu</span>
+<span class="mi">1</span> <span class="mf">20.0993</span> <span class="mf">14.7149</span> <span class="o">-</span><span class="mf">5.20836</span>
+<span class="mi">2</span> <span class="mf">8.78739</span> <span class="mf">12.8425</span> <span class="o">-</span><span class="mf">25.9197</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>This is repeated for each timestep.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.analysis.read_vector_trajectory">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.analysis.</span></span><span class="sig-name descname"><span class="pre">read_vector_trajectory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/analysis.html#read_vector_trajectory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.analysis.read_vector_trajectory" title="Link to this definition">#</a></dt>
+<dd><p>Read a standard vector trajectory from LAMMPS fix vector.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>pathlib.Path</em>) – The file as a string or path-like object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-diffusivity_step.diffusivity">
+<span id="diffusivity-step-diffusivity-module"></span><h2>diffusivity_step.diffusivity module<a class="headerlink" href="#module-diffusivity_step.diffusivity" title="Link to this heading">#</a></h2>
+<p>Non-graphical part of the Diffusivity step in a SEAMM flowchart</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">diffusivity_step.diffusivity.</span></span><span class="sig-name descname"><span class="pre">Diffusivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flowchart=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title='Diffusivity'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namespace='org.molssi.seamm'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger=&lt;Logger</span> <span class="pre">diffusivity_step.diffusivity</span> <span class="pre">(WARNING)&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></p>
+<p>The non-graphical part of a Diffusivity step in a flowchart.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.parser">
+<span class="sig-name descname"><span class="pre">parser</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.parser" title="Link to this definition">#</a></dt>
+<dd><p>The parser object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>configargparse.ArgParser</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.options">
+<span class="sig-name descname"><span class="pre">options</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.options" title="Link to this definition">#</a></dt>
+<dd><p>It contains a two item tuple containing the populated namespace and the
+list of remaining argument strings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.subflowchart">
+<span class="sig-name descname"><span class="pre">subflowchart</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.subflowchart" title="Link to this definition">#</a></dt>
+<dd><p>A SEAMM Flowchart object that represents a subflowchart, if needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>seamm.Flowchart</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.parameters">
+<span class="sig-name descname"><span class="pre">parameters</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.parameters" title="Link to this definition">#</a></dt>
+<dd><p>The control parameters for Diffusivity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#diffusivity_step.diffusivity_parameters.DiffusivityParameters" title="diffusivity_step.diffusivity_parameters.DiffusivityParameters">DiffusivityParameters</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TkDiffusivity</span></code>, <a class="reference internal" href="#diffusivity_step.diffusivity.Diffusivity" title="diffusivity_step.diffusivity.Diffusivity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Diffusivity</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">DiffusivityParameters</span></code></p>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.analyze">
+<span class="sig-name descname"><span class="pre">analyze</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weighted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.analyze"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.analyze" title="Link to this definition">#</a></dt>
+<dd><p>Do any analysis of the output from this run.</p>
+<p>Also print important results to the local step.out file using
+“printer”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>indent</strong> (<em>str</em>) – An extra indentation for the output</p></li>
+<li><p><strong>weighted</strong> (<em>bool</em>) – Whether to use the stderr to weight the fit, default False</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.analyze_run">
+<span class="sig-name descname"><span class="pre">analyze_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weighted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.analyze_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.analyze_run" title="Link to this definition">#</a></dt>
+<dd><p>Do any analysis of the output from this step.</p>
+<p>Also print important results to the local step.out file using
+“printer”.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>indent</strong> (<em>str</em>) – An extra indentation for the output</p></li>
+<li><p><strong>weighted</strong> (<em>bool</em>) – Whether to use the stderr to weight the fit, default False</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.configuration">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">configuration</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.configuration" title="Link to this definition">#</a></dt>
+<dd><p>The initial configuration for this run.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.create_parser">
+<span class="sig-name descname"><span class="pre">create_parser</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.create_parser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.create_parser" title="Link to this definition">#</a></dt>
+<dd><p>Setup the command-line / config file parser</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.description_text">
+<span class="sig-name descname"><span class="pre">description_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">short</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.description_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.description_text" title="Link to this definition">#</a></dt>
+<dd><p>Create the text description of what this step will do.
+The dictionary of control values is passed in as P so that
+the code can test values, etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>P</strong> (<em>dict</em>) – An optional dictionary of the current values of the control
+parameters.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A description of the current step.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.git_revision">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">git_revision</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.git_revision" title="Link to this definition">#</a></dt>
+<dd><p>The git version of this module.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.n_molecules">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_molecules</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.n_molecules" title="Link to this definition">#</a></dt>
+<dd><p>The number of molecules in the system.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.parse_molecules">
+<span class="sig-name descname"><span class="pre">parse_molecules</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.parse_molecules"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.parse_molecules" title="Link to this definition">#</a></dt>
+<dd><p>Get the lists of molecules of each type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The list of molecule numbers (0-based) for each canonical SMILES string
+for a species.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>{str, [int]}</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.process_run">
+<span class="sig-name descname"><span class="pre">process_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.process_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.process_run" title="Link to this definition">#</a></dt>
+<dd><p>Get the positions and velocities from the run and do initial processing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>run</strong> (<em>int</em>) – The run number</p></li>
+<li><p><strong>run_dir</strong> (<em>pathlib.Path</em>) – The toplevel directory of the run.</p></li>
+<li><p><strong>P</strong> (<em>[</em><em>str: any</em><em>]</em>) – Dictionary of control parameters, or default of None in which case the
+standard parameters are used.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.results">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">results</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.results" title="Link to this definition">#</a></dt>
+<dd><p>The results data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.run" title="Link to this definition">#</a></dt>
+<dd><p>Run the diffusivity step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>None</strong></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The next node object in the flowchart.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>seamm.Node</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.set_id">
+<span class="sig-name descname"><span class="pre">set_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.set_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.set_id" title="Link to this definition">#</a></dt>
+<dd><p>Sequentially number the subnodes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.set_subids">
+<span class="sig-name descname"><span class="pre">set_subids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#Diffusivity.set_subids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.set_subids" title="Link to this definition">#</a></dt>
+<dd><p>Set the ids of the nodes in the subflowchart</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.species">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">species</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.species" title="Link to this definition">#</a></dt>
+<dd><p>The species and list of molecules for each.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.Diffusivity.version">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">version</span></span><a class="headerlink" href="#diffusivity_step.diffusivity.Diffusivity.version" title="Link to this definition">#</a></dt>
+<dd><p>The semantic version of this module.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity.fmt_err">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.diffusivity.</span></span><span class="sig-name descname"><span class="pre">fmt_err</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">err</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_float</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity.html#fmt_err"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity.fmt_err" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-diffusivity_step.diffusivity_parameters">
+<span id="diffusivity-step-diffusivity-parameters-module"></span><h2>diffusivity_step.diffusivity_parameters module<a class="headerlink" href="#module-diffusivity_step.diffusivity_parameters" title="Link to this heading">#</a></h2>
+<p>Control parameters for the Diffusivity step in a SEAMM flowchart</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_parameters.DiffusivityParameters">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">diffusivity_step.diffusivity_parameters.</span></span><span class="sig-name descname"><span class="pre">DiffusivityParameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">defaults</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity_parameters.html#DiffusivityParameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity_parameters.DiffusivityParameters" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Parameters</span></code></p>
+<p>The control parameters for Diffusivity.</p>
+<p>You need to replace the “time” entry in dictionary below these comments with the
+definitions of parameters to control this step. The keys are parameters for the
+current plugin,the values are dictionaries as outlined below.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;float&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;default_units&quot;</span><span class="p">:</span> <span class="s2">&quot;ps&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;enumeration&quot;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(),</span>
+        <span class="s2">&quot;format_string&quot;</span><span class="p">:</span> <span class="s2">&quot;.1f&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Simulation time:&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;help_text&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;The time to simulate in the dynamics run.&quot;</span><span class="p">)</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl>
+<dt>parameters<span class="classifier">{str: {str: str}}</span></dt><dd><p>A dictionary containing the parameters for the current step.
+Each key of the dictionary is a dictionary that contains the
+the following keys:</p>
+</dd>
+<dt>parameters[“default”] :</dt><dd><p>The default value of the parameter, used to reset it.</p>
+</dd>
+<dt>parameters[“kind”]<span class="classifier">enum()</span></dt><dd><p>Specifies the kind of a variable. One of  “integer”, “float”, “string”,
+“boolean”, or “enum”</p>
+<p>While the “kind” of a variable might be a numeric value, it may still have
+enumerated custom values meaningful to the user. For instance, if the parameter
+is a convergence criterion for an optimizer, custom values like “normal”,
+“precise”, etc, might be adequate. In addition, any parameter can be set to a
+variable of expression, indicated by having “$” as the first character in the
+field. For example, $OPTIMIZER_CONV.</p>
+</dd>
+<dt>parameters[“default_units”]<span class="classifier">str</span></dt><dd><p>The default units, used for resetting the value.</p>
+</dd>
+<dt>parameters[“enumeration”]<span class="classifier">tuple</span></dt><dd><p>A tuple of enumerated values.</p>
+</dd>
+<dt>parameters[“format_string”]<span class="classifier">str</span></dt><dd><p>A format string for “pretty” output.</p>
+</dd>
+<dt>parameters[“description”]<span class="classifier">str</span></dt><dd><p>A short string used as a prompt in the GUI.</p>
+</dd>
+<dt>parameters[“help_text”]<span class="classifier">str</span></dt><dd><p>A longer string to display as help for the user.</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Diffusivity</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">TkDiffusivity</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">Diffusivity</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">DiffusivityStep</span></code></p>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_parameters.DiffusivityParameters.parameters">
+<span class="sig-name descname"><span class="pre">parameters</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'approach':</span> <span class="pre">{'default':</span> <span class="pre">'both',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'Approach:',</span> <span class="pre">'enumeration':</span> <span class="pre">('both',</span> <span class="pre">'Helfand</span> <span class="pre">moments',</span> <span class="pre">'Mean</span> <span class="pre">Square</span> <span class="pre">Displacement</span> <span class="pre">(MSD)'),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'The</span> <span class="pre">approach</span> <span class="pre">or</span> <span class="pre">method</span> <span class="pre">for</span> <span class="pre">determining</span> <span class="pre">the</span> <span class="pre">diffusivity.',</span> <span class="pre">'kind':</span> <span class="pre">'enum'},</span> <span class="pre">'errors':</span> <span class="pre">{'default':</span> <span class="pre">'continue</span> <span class="pre">to</span> <span class="pre">next</span> <span class="pre">run',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'On</span> <span class="pre">errors',</span> <span class="pre">'enumeration':</span> <span class="pre">('continue</span> <span class="pre">to</span> <span class="pre">next</span> <span class="pre">run',</span> <span class="pre">'exit</span> <span class="pre">the</span> <span class="pre">thermal</span> <span class="pre">conductivity</span> <span class="pre">step',</span> <span class="pre">'stop</span> <span class="pre">the</span> <span class="pre">job'),</span> <span class="pre">'format_string':</span> <span class="pre">'s',</span> <span class="pre">'help_text':</span> <span class="pre">'How</span> <span class="pre">to</span> <span class="pre">handle</span> <span class="pre">errors</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">runs',</span> <span class="pre">'kind':</span> <span class="pre">'string'},</span> <span class="pre">'helfand_fit_end':</span> <span class="pre">{'default':</span> <span class="pre">'1.00',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'End</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">Helfand</span> <span class="pre">fit</span> <span class="pre">(0.0..1.0):',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'End</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">Helfand</span> <span class="pre">fit</span> <span class="pre">this</span> <span class="pre">far</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">data.',</span> <span class="pre">'kind':</span> <span class="pre">'float'},</span> <span class="pre">'helfand_fit_start':</span> <span class="pre">{'default':</span> <span class="pre">'0.35',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'Start</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">Helfand</span> <span class="pre">fit</span> <span class="pre">(0.0..1.0):',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'Starting</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">Helfand</span> <span class="pre">fit</span> <span class="pre">this</span> <span class="pre">far</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">data.',</span> <span class="pre">'kind':</span> <span class="pre">'float'},</span> <span class="pre">'hydrodynamic</span> <span class="pre">correction':</span> <span class="pre">{'default':</span> <span class="pre">'no',</span> <span class="pre">'description':</span> <span class="pre">'Correction</span> <span class="pre">for</span> <span class="pre">cell</span> <span class="pre">size:',</span> <span class="pre">'enumeration':</span> <span class="pre">('no',</span> <span class="pre">'yes'),</span> <span class="pre">'format_string':</span> <span class="pre">'s',</span> <span class="pre">'help_text':</span> <span class="pre">'Apply</span> <span class="pre">the</span> <span class="pre">Yeh-Hummer</span> <span class="pre">hydrodynamic</span> <span class="pre">correction</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">cell</span> <span class="pre">size.',</span> <span class="pre">'kind':</span> <span class="pre">'boolean'},</span> <span class="pre">'maximum</span> <span class="pre">Helfand</span> <span class="pre">Integral</span> <span class="pre">length':</span> <span class="pre">{'default':</span> <span class="pre">1000,</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'Maximum</span> <span class="pre">Helfand</span> <span class="pre">Integral</span> <span class="pre">length:',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'Maximum</span> <span class="pre">length</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">Integral</span> <span class="pre">used</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">Helfand</span> <span class="pre">moments.',</span> <span class="pre">'kind':</span> <span class="pre">'integer'},</span> <span class="pre">'msd_fit_end':</span> <span class="pre">{'default':</span> <span class="pre">'0.6',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'End</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">MSD</span> <span class="pre">fit</span> <span class="pre">(0.0..1.0):',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'End</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">fit</span> <span class="pre">the</span> <span class="pre">MSD</span> <span class="pre">this</span> <span class="pre">far</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">data.',</span> <span class="pre">'kind':</span> <span class="pre">'float'},</span> <span class="pre">'msd_fit_start':</span> <span class="pre">{'default':</span> <span class="pre">'0.1',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'Start</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">MSD</span> <span class="pre">fit</span> <span class="pre">(0.0..1.0):',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'Starting</span> <span class="pre">point</span> <span class="pre">of</span> <span class="pre">fit</span> <span class="pre">the</span> <span class="pre">MSD</span> <span class="pre">this</span> <span class="pre">far</span> <span class="pre">into</span> <span class="pre">the</span> <span class="pre">data.',</span> <span class="pre">'kind':</span> <span class="pre">'float'},</span> <span class="pre">'nruns':</span> <span class="pre">{'default':</span> <span class="pre">'5',</span> <span class="pre">'default_units':</span> <span class="pre">'',</span> <span class="pre">'description':</span> <span class="pre">'Number</span> <span class="pre">of</span> <span class="pre">runs</span> <span class="pre">to</span> <span class="pre">average:',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'The</span> <span class="pre">number</span> <span class="pre">for</span> <span class="pre">separate</span> <span class="pre">runs</span> <span class="pre">to</span> <span class="pre">average.',</span> <span class="pre">'kind':</span> <span class="pre">'integer'},</span> <span class="pre">'results':</span> <span class="pre">{'default':</span> <span class="pre">{},</span> <span class="pre">'default_units':</span> <span class="pre">None,</span> <span class="pre">'description':</span> <span class="pre">'results',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'The</span> <span class="pre">results</span> <span class="pre">to</span> <span class="pre">save</span> <span class="pre">to</span> <span class="pre">variables</span> <span class="pre">or</span> <span class="pre">in</span> <span class="pre">tables.',</span> <span class="pre">'kind':</span> <span class="pre">'dictionary'},</span> <span class="pre">'viscosity':</span> <span class="pre">{'default':</span> <span class="pre">'0.0',</span> <span class="pre">'default_units':</span> <span class="pre">'cP',</span> <span class="pre">'description':</span> <span class="pre">'Viscosity:',</span> <span class="pre">'enumeration':</span> <span class="pre">(),</span> <span class="pre">'format_string':</span> <span class="pre">'',</span> <span class="pre">'help_text':</span> <span class="pre">'The</span> <span class="pre">viscosity</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">Yeh-Hummer</span> <span class="pre">cell</span> <span class="pre">size</span> <span class="pre">correction.',</span> <span class="pre">'kind':</span> <span class="pre">'float'}}</span></em><a class="headerlink" href="#diffusivity_step.diffusivity_parameters.DiffusivityParameters.parameters" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-diffusivity_step.diffusivity_step">
+<span id="diffusivity-step-diffusivity-step-module"></span><h2>diffusivity_step.diffusivity_step module<a class="headerlink" href="#module-diffusivity_step.diffusivity_step" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_step.DiffusivityStep">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">diffusivity_step.diffusivity_step.</span></span><span class="sig-name descname"><span class="pre">DiffusivityStep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flowchart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gui</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity_step.html#DiffusivityStep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity_step.DiffusivityStep" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Helper class needed for the stevedore integration.</p>
+<p>This must provide a <cite>description()</cite> method that returns a dict containing a
+description of this node, and <cite>create_node()</cite> and <cite>create_tk_node()</cite> methods
+for creating the graphical and non-graphical nodes.</p>
+<p>The dictionary for the description is the class variable just below these
+comments. The felds are as follows:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>my_description<span class="classifier">{str, str}</span></dt><dd><p>A human-readable description of this step. It can be
+several lines long, and needs to be clear to non-expert users.
+It contains the following keys: description, group, name.</p>
+</dd>
+<dt>my_description[“description”]<span class="classifier">tuple</span></dt><dd><p>A description of the Diffusivity step. It must be
+clear to non-experts.</p>
+</dd>
+<dt>my_description[“group”]<span class="classifier">str</span></dt><dd><p>Which group in the menus to put this step. If the group does
+not exist it will be created. Common groups are “Building”,
+“Control”, “Custom”, “Data”, and “Simulations”.</p>
+</dd>
+<dt>my_description[“name”]<span class="classifier">str</span></dt><dd><p>The name of this step, to be displayed in the menus.</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_step.DiffusivityStep.create_node">
+<span class="sig-name descname"><span class="pre">create_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flowchart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity_step.html#DiffusivityStep.create_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity_step.DiffusivityStep.create_node" title="Link to this definition">#</a></dt>
+<dd><p>Create and return the new node object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>flowchart</strong> (<em>seamm.Node</em>) – A non-graphical SEAMM node</p></li>
+<li><p><strong>**kwargs</strong> (<em>keyword arguments</em>) – Various keyword arguments such as title, namespace or
+extension representing the title displayed in the flowchart,
+the namespace for the plugins of a subflowchart and
+the extension, respectively.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#diffusivity_step.diffusivity.Diffusivity" title="diffusivity_step.diffusivity.Diffusivity">Diffusivity</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_step.DiffusivityStep.create_tk_node">
+<span class="sig-name descname"><span class="pre">create_tk_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">canvas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity_step.html#DiffusivityStep.create_tk_node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity_step.DiffusivityStep.create_tk_node" title="Link to this definition">#</a></dt>
+<dd><p>Create and return the graphical Tk node object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>canvas</strong> (<em>tk.Canvas</em>) – The Tk Canvas widget</p></li>
+<li><p><strong>**kwargs</strong> (<em>keyword arguments</em>) – Various keyword arguments such as tk_flowchart, node, x, y, w, h
+representing a graphical flowchart object, a non-graphical node for
+a step, and dimensions of the graphical node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#diffusivity_step.tk_diffusivity.TkDiffusivity" title="diffusivity_step.tk_diffusivity.TkDiffusivity">TkDiffusivity</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_step.DiffusivityStep.description">
+<span class="sig-name descname"><span class="pre">description</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/diffusivity_step.html#DiffusivityStep.description"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.diffusivity_step.DiffusivityStep.description" title="Link to this definition">#</a></dt>
+<dd><p>Return a description of what this step does.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>description</strong></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict(str, str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.diffusivity_step.DiffusivityStep.my_description">
+<span class="sig-name descname"><span class="pre">my_description</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'description':</span> <span class="pre">'An</span> <span class="pre">interface</span> <span class="pre">for</span> <span class="pre">Diffusivity',</span> <span class="pre">'group':</span> <span class="pre">'Properties',</span> <span class="pre">'name':</span> <span class="pre">'Diffusivity'}</span></em><a class="headerlink" href="#diffusivity_step.diffusivity_step.DiffusivityStep.my_description" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-diffusivity_step.metadata">
+<span id="diffusivity-step-metadata-module"></span><h2>diffusivity_step.metadata module<a class="headerlink" href="#module-diffusivity_step.metadata" title="Link to this heading">#</a></h2>
+<p>This file contains metadata describing the results from Diffusivity</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="diffusivity_step.metadata.metadata">
+<span class="sig-prename descclassname"><span class="pre">diffusivity_step.metadata.</span></span><span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'results':</span> <span class="pre">{'1/L':</span> <span class="pre">{'description':</span> <span class="pre">'1/length</span> <span class="pre">of</span> <span class="pre">cell</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'1/Å'},</span> <span class="pre">'1/L,stderr':</span> <span class="pre">{'description':</span> <span class="pre">'Standard</span> <span class="pre">error</span> <span class="pre">if</span> <span class="pre">1/length</span> <span class="pre">of</span> <span class="pre">cell</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'1/Å'},</span> <span class="pre">'D</span> <span class="pre">{key}':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">total</span> <span class="pre">diffusion</span> <span class="pre">coefficient',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'D#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'D</span> <span class="pre">{key}</span> <span class="pre">(HM)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">total</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'D#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'D</span> <span class="pre">{key}</span> <span class="pre">(HM),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">total</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'D,stderr#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'D</span> <span class="pre">{key}</span> <span class="pre">(MSD)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">total</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'D#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'D</span> <span class="pre">{key}</span> <span class="pre">(MSD),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">total</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'D,stderr#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'D</span> <span class="pre">{key},stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">total</span> <span class="pre">diffusion</span> <span class="pre">coefficient',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'D,stderr#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dx</span> <span class="pre">{key}':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">x',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dx#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dx</span> <span class="pre">{key}</span> <span class="pre">(HM)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">x</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dx#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dx</span> <span class="pre">{key}</span> <span class="pre">(HM),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">x</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dx,stderr#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dx</span> <span class="pre">{key}</span> <span class="pre">(MSD)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">x</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dx#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dx</span> <span class="pre">{key}</span> <span class="pre">(MSD),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">if</span> <span class="pre">thediffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">x</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dx,stderr#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dx</span> <span class="pre">{key},stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">x',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dx,stderr#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dy</span> <span class="pre">{key}':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">y',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dy#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dy</span> <span class="pre">{key}</span> <span class="pre">(HM)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">y</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dy#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dy</span> <span class="pre">{key}</span> <span class="pre">(HM),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">y</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dy,stderr#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dy</span> <span class="pre">{key}</span> <span class="pre">(MSD)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">y</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dy#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dy</span> <span class="pre">{key}</span> <span class="pre">(MSD),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">if</span> <span class="pre">thediffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">y</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dy,stderr#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dy</span> <span class="pre">{key},stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">y',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dy,stderr#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dz</span> <span class="pre">{key}':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">z',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dz#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dz</span> <span class="pre">{key}</span> <span class="pre">(HM)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">z</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dz#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dz</span> <span class="pre">{key}</span> <span class="pre">(HM),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">z</span> <span class="pre">from</span> <span class="pre">Helfand</span> <span class="pre">Moments',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dz,stderr#Helfand</span> <span class="pre">Moments#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dz</span> <span class="pre">{key}</span> <span class="pre">(MSD)':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">z</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dz#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dz</span> <span class="pre">{key}</span> <span class="pre">(MSD),stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">if</span> <span class="pre">thediffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">z</span> <span class="pre">from</span> <span class="pre">MSD',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dz,stderr#MSD#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Dz</span> <span class="pre">{key},stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">coefficient</span> <span class="pre">in</span> <span class="pre">z',</span> <span class="pre">'dimensionality':</span> <span class="pre">'{species:</span> <span class="pre">value}',</span> <span class="pre">'property':</span> <span class="pre">'Dz,stderr#{model}',</span> <span class="pre">'type':</span> <span class="pre">'json',</span> <span class="pre">'units':</span> <span class="pre">'m^2/s'},</span> <span class="pre">'Helfand</span> <span class="pre">integral</span> <span class="pre">length':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">length</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">Helfand</span> <span class="pre">numerical</span> <span class="pre">integration',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'integer'},</span> <span class="pre">'P':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">pressure</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'atm'},</span> <span class="pre">'P,stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">pressure</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'atm'},</span> <span class="pre">'T':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">temperature</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'K'},</span> <span class="pre">'T,stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">temperature</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'K'},</span> <span class="pre">'approach':</span> <span class="pre">{'description':</span> <span class="pre">'Algorithm</span> <span class="pre">for</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'string'},</span> <span class="pre">'density':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">density</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'g/mL'},</span> <span class="pre">'density,stderr':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">standard</span> <span class="pre">error</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">density</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">diffusion</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'g/mL'},</span> <span class="pre">'helfand_fit_end':</span> <span class="pre">{'description':</span> <span class="pre">'Where</span> <span class="pre">to</span> <span class="pre">end</span> <span class="pre">the</span> <span class="pre">fit</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">Helfand</span> <span class="pre">moments</span> <span class="pre">curve',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float'},</span> <span class="pre">'helfand_fit_start':</span> <span class="pre">{'description':</span> <span class="pre">'Where</span> <span class="pre">to</span> <span class="pre">start</span> <span class="pre">the</span> <span class="pre">fit</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">Helfand</span> <span class="pre">moments</span> <span class="pre">curve',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float'},</span> <span class="pre">'msd</span> <span class="pre">samples':</span> <span class="pre">{'description':</span> <span class="pre">'Number</span> <span class="pre">of</span> <span class="pre">samples</span> <span class="pre">to</span> <span class="pre">take</span> <span class="pre">for</span> <span class="pre">the</span> <span class="pre">MSD</span> <span class="pre">calculation',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float'},</span> <span class="pre">'msd_fit_end':</span> <span class="pre">{'description':</span> <span class="pre">'Where</span> <span class="pre">to</span> <span class="pre">end</span> <span class="pre">the</span> <span class="pre">fit</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">MSD</span> <span class="pre">curve',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float'},</span> <span class="pre">'msd_fit_start':</span> <span class="pre">{'description':</span> <span class="pre">'Where</span> <span class="pre">to</span> <span class="pre">start</span> <span class="pre">the</span> <span class="pre">fit</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">MSD</span> <span class="pre">curve',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float'},</span> <span class="pre">'nruns':</span> <span class="pre">{'description':</span> <span class="pre">'Number</span> <span class="pre">of</span> <span class="pre">runs</span> <span class="pre">to</span> <span class="pre">average',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'integer'},</span> <span class="pre">'t_hm':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">time</span> <span class="pre">taken</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">Helfand</span> <span class="pre">moments</span> <span class="pre">analysis',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'s'},</span> <span class="pre">'t_msd':</span> <span class="pre">{'description':</span> <span class="pre">'The</span> <span class="pre">time</span> <span class="pre">taken</span> <span class="pre">in</span> <span class="pre">the</span> <span class="pre">MSD</span> <span class="pre">analysis',</span> <span class="pre">'dimensionality':</span> <span class="pre">'scalar',</span> <span class="pre">'type':</span> <span class="pre">'float',</span> <span class="pre">'units':</span> <span class="pre">'s'}}}</span></em><a class="headerlink" href="#diffusivity_step.metadata.metadata" title="Link to this definition">#</a></dt>
+<dd><p>Description of the computational models for Diffusivity.</p>
+<p>Hamiltonians, approximations, and basis set or parameterizations,
+only if appropriate for this code. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;computational models&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Hartree-Fock&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;PM7&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;parameterizations&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;PM7&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;elements&quot;</span><span class="p">:</span> <span class="s2">&quot;1-60,62-83&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;periodic&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;reactions&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;optimization&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;mopac&quot;</span><span class="p">,</span>
+                    <span class="p">},</span>
+                    <span class="s2">&quot;PM7-TS&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;elements&quot;</span><span class="p">:</span> <span class="s2">&quot;1-60,62-83&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;periodic&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;reactions&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;optimization&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;mopac&quot;</span><span class="p">,</span>
+                    <span class="p">},</span>
+                <span class="p">},</span>
+            <span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="module-diffusivity_step.tk_diffusivity">
+<span id="diffusivity-step-tk-diffusivity-module"></span><h2>diffusivity_step.tk_diffusivity module<a class="headerlink" href="#module-diffusivity_step.tk_diffusivity" title="Link to this heading">#</a></h2>
+<p>The graphical part of a Diffusivity step</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">diffusivity_step.tk_diffusivity.</span></span><span class="sig-name descname"><span class="pre">TkDiffusivity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tk_flowchart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namespace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'org.molssi.seamm.tk'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">canvas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/tk_diffusivity.html#TkDiffusivity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">TkNode</span></code></p>
+<p>The graphical part of a Diffusivity step in a flowchart.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.tk_flowchart">
+<span class="sig-name descname"><span class="pre">tk_flowchart</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.tk_flowchart" title="Link to this definition">#</a></dt>
+<dd><p>The flowchart that we belong to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TkFlowchart = None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.node">
+<span class="sig-name descname"><span class="pre">node</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.node" title="Link to this definition">#</a></dt>
+<dd><p>The corresponding node of the non-graphical flowchart</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Node = None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.namespace">
+<span class="sig-name descname"><span class="pre">namespace</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.namespace" title="Link to this definition">#</a></dt>
+<dd><p>The namespace of the current step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.tk_subflowchart">
+<span class="sig-name descname"><span class="pre">tk_subflowchart</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.tk_subflowchart" title="Link to this definition">#</a></dt>
+<dd><p>A graphical Flowchart representing a subflowchart</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TkFlowchart</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.canvas">
+<span class="sig-name descname"><span class="pre">canvas</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.canvas" title="Link to this definition">#</a></dt>
+<dd><p>The Tk Canvas to draw on</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tkCanvas = None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.dialog">
+<span class="sig-name descname"><span class="pre">dialog</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.dialog" title="Link to this definition">#</a></dt>
+<dd><p>The Pmw dialog object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dialog</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.x">
+<span class="sig-name descname"><span class="pre">x</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.x" title="Link to this definition">#</a></dt>
+<dd><p>The x-coordinate of the center of the picture of the node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int = None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.y">
+<span class="sig-name descname"><span class="pre">y</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.y" title="Link to this definition">#</a></dt>
+<dd><p>The y-coordinate of the center of the picture of the node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int = None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.w">
+<span class="sig-name descname"><span class="pre">w</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.w" title="Link to this definition">#</a></dt>
+<dd><p>The width in pixels of the picture of the node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int = 200</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.h">
+<span class="sig-name descname"><span class="pre">h</span></span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.h" title="Link to this definition">#</a></dt>
+<dd><p>The height in pixels of the picture of the node</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int = 50</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.self">
+<span class="sig-name descname"><span class="pre">self</span></span><span class="sig-paren">[</span><em class="sig-param"><span class="n"><span class="pre">widget</span></span></em><span class="sig-paren">]</span><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.self" title="Link to this definition">#</a></dt>
+<dd><p>A dictionary of tk widgets built using the information
+contained in Diffusivity_parameters.py</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Diffusivity</span></code>, <a class="reference internal" href="#diffusivity_step.tk_diffusivity.TkDiffusivity" title="diffusivity_step.tk_diffusivity.TkDiffusivity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TkDiffusivity</span></code></a>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">DiffusivityParameters</span></code></p>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.create_dialog">
+<span class="sig-name descname"><span class="pre">create_dialog</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/tk_diffusivity.html#TkDiffusivity.create_dialog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.create_dialog" title="Link to this definition">#</a></dt>
+<dd><p>Create the dialog. A set of widgets will be chosen by default
+based on what is specified in the  diffusivity parameters
+module.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>None</strong></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.reset_dialog" title="diffusivity_step.tk_diffusivity.TkDiffusivity.reset_dialog"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TkDiffusivity.reset_dialog</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.reset_dialog">
+<span class="sig-name descname"><span class="pre">reset_dialog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">widget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/tk_diffusivity.html#TkDiffusivity.reset_dialog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.reset_dialog" title="Link to this definition">#</a></dt>
+<dd><p>Layout the widgets in the dialog.</p>
+<p>The widgets are chosen by default from the information in
+Diffusivity parameters.</p>
+<p>This function simply lays them out row by row with
+aligned labels. You may wish a more complicated layout that
+is controlled by values of some of the control parameters.
+If so, edit or override this method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>widget</strong> (<em>Tk Widget = None</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.create_dialog" title="diffusivity_step.tk_diffusivity.TkDiffusivity.create_dialog"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TkDiffusivity.create_dialog</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.reset_diffusivity_frame">
+<span class="sig-name descname"><span class="pre">reset_diffusivity_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">widget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/tk_diffusivity.html#TkDiffusivity.reset_diffusivity_frame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.reset_diffusivity_frame" title="Link to this definition">#</a></dt>
+<dd><p>Layout the widgets in the diffusivity frame
+as needed for the current state</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffusivity_step.tk_diffusivity.TkDiffusivity.right_click">
+<span class="sig-name descname"><span class="pre">right_click</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffusivity_step/tk_diffusivity.html#TkDiffusivity.right_click"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.right_click" title="Link to this definition">#</a></dt>
+<dd><p>Handles the right click event on the node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>event</strong> (<em>Tk Event</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TkDiffusivity.edit</span></code></p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-diffusivity_step">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-diffusivity_step" title="Link to this heading">#</a></h2>
+<p>diffusivity_step
+A SEAMM plug-in for Diffusivity</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step.analysis">diffusivity_step.analysis module</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.add_helfand_trace"><code class="docutils literal notranslate"><span class="pre">add_helfand_trace()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.add_msd_trace"><code class="docutils literal notranslate"><span class="pre">add_msd_trace()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.axb"><code class="docutils literal notranslate"><span class="pre">axb()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.compute_msd"><code class="docutils literal notranslate"><span class="pre">compute_msd()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.create_helfand_moments"><code class="docutils literal notranslate"><span class="pre">create_helfand_moments()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.fit_slope"><code class="docutils literal notranslate"><span class="pre">fit_slope()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.plot_helfand_moments"><code class="docutils literal notranslate"><span class="pre">plot_helfand_moments()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.plot_msd"><code class="docutils literal notranslate"><span class="pre">plot_msd()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.read_dump_trajectory"><code class="docutils literal notranslate"><span class="pre">read_dump_trajectory()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.analysis.read_vector_trajectory"><code class="docutils literal notranslate"><span class="pre">read_vector_trajectory()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step.diffusivity">diffusivity_step.diffusivity module</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity"><code class="docutils literal notranslate"><span class="pre">Diffusivity</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.parser"><code class="docutils literal notranslate"><span class="pre">Diffusivity.parser</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.options"><code class="docutils literal notranslate"><span class="pre">Diffusivity.options</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.subflowchart"><code class="docutils literal notranslate"><span class="pre">Diffusivity.subflowchart</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.parameters"><code class="docutils literal notranslate"><span class="pre">Diffusivity.parameters</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.analyze"><code class="docutils literal notranslate"><span class="pre">Diffusivity.analyze()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.analyze_run"><code class="docutils literal notranslate"><span class="pre">Diffusivity.analyze_run()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.configuration"><code class="docutils literal notranslate"><span class="pre">Diffusivity.configuration</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.create_parser"><code class="docutils literal notranslate"><span class="pre">Diffusivity.create_parser()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.description_text"><code class="docutils literal notranslate"><span class="pre">Diffusivity.description_text()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.git_revision"><code class="docutils literal notranslate"><span class="pre">Diffusivity.git_revision</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.n_molecules"><code class="docutils literal notranslate"><span class="pre">Diffusivity.n_molecules</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.parse_molecules"><code class="docutils literal notranslate"><span class="pre">Diffusivity.parse_molecules()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.process_run"><code class="docutils literal notranslate"><span class="pre">Diffusivity.process_run()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.results"><code class="docutils literal notranslate"><span class="pre">Diffusivity.results</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.run"><code class="docutils literal notranslate"><span class="pre">Diffusivity.run()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.set_id"><code class="docutils literal notranslate"><span class="pre">Diffusivity.set_id()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.set_subids"><code class="docutils literal notranslate"><span class="pre">Diffusivity.set_subids()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.species"><code class="docutils literal notranslate"><span class="pre">Diffusivity.species</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.Diffusivity.version"><code class="docutils literal notranslate"><span class="pre">Diffusivity.version</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity.fmt_err"><code class="docutils literal notranslate"><span class="pre">fmt_err()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step.diffusivity_parameters">diffusivity_step.diffusivity_parameters module</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_parameters.DiffusivityParameters"><code class="docutils literal notranslate"><span class="pre">DiffusivityParameters</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_parameters.DiffusivityParameters.parameters"><code class="docutils literal notranslate"><span class="pre">DiffusivityParameters.parameters</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step.diffusivity_step">diffusivity_step.diffusivity_step module</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_step.DiffusivityStep"><code class="docutils literal notranslate"><span class="pre">DiffusivityStep</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_step.DiffusivityStep.create_node"><code class="docutils literal notranslate"><span class="pre">DiffusivityStep.create_node()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_step.DiffusivityStep.create_tk_node"><code class="docutils literal notranslate"><span class="pre">DiffusivityStep.create_tk_node()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_step.DiffusivityStep.description"><code class="docutils literal notranslate"><span class="pre">DiffusivityStep.description()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.diffusivity_step.DiffusivityStep.my_description"><code class="docutils literal notranslate"><span class="pre">DiffusivityStep.my_description</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step.metadata">diffusivity_step.metadata module</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.metadata.metadata"><code class="docutils literal notranslate"><span class="pre">metadata</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step.tk_diffusivity">diffusivity_step.tk_diffusivity module</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.tk_flowchart"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.tk_flowchart</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.node"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.node</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.namespace"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.namespace</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.tk_subflowchart"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.tk_subflowchart</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.canvas"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.canvas</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.dialog"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.dialog</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.x"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.x</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.y"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.y</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.w"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.w</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.h"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.h</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.self"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.self</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.create_dialog"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.create_dialog()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.reset_dialog"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.reset_dialog()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.reset_diffusivity_frame"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.reset_diffusivity_frame()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#diffusivity_step.tk_diffusivity.TkDiffusivity.right_click"><code class="docutils literal notranslate"><span class="pre">TkDiffusivity.right_click()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-diffusivity_step">Module contents</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/developer/diffusivity_step.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
