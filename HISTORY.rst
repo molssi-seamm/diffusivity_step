@@ -1,6 +1,8 @@
 =======
 History
 =======
+2026.3.1 -- Internal: switching from deprecated library pkg_resources to importlib
+
 2026.1.8 -- Enhancement to use atomic position and velocity trajectories
     * Add support for the atomic position and velocity trajectories for
       forcefields/potentials such as EAM/MEAM where there are no bonds, and hence the

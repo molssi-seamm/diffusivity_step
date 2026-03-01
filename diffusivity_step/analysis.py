@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Routines to help do the analysis for diffusivity."""
+
 import json
 
 # import warnings
