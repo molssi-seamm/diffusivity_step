@@ -2,11 +2,11 @@
 
 """Non-graphical part of the Diffusivity step in a SEAMM flowchart"""
 
+import importlib
 import logging
 import math
 from math import log10, ceil, floor, sqrt
 from pathlib import Path
-import pkg_resources
 import sys
 import time
 import traceback
@@ -44,7 +44,7 @@ job = printing.getPrinter()
 printer = printing.getPrinter("Diffusivity")
 
 # Add this module's properties to the standard properties
-path = Path(pkg_resources.resource_filename(__name__, "data/"))
+path = importlib.resources.files("diffusivity_step") / "data"
 csv_file = path / "properties.csv"
 if path.exists():
     molsystem.add_properties_from_file(csv_file)
@@ -388,7 +388,7 @@ class Diffusivity(seamm.Node):
 
                     # Set a scale factor to make the numbers managable
                     if self._scale is None:
-                        self._scale = 10 ** floor(log10(d_coeff))
+                        self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
 
                     if correction is not None:
                         if i < 3:
@@ -1533,10 +1533,18 @@ class Diffusivity(seamm.Node):
             paths = sorted(run_dir.glob("**/com_velocities.trj"))
 
             if len(paths) == 0:
-                raise RuntimeError(f"There is no com velocity data for run {run}.")
-            elif len(paths) > 1:
+                # See if there are atom positions?
+                paths = sorted(run_dir.glob("**/atomic_velocities.dump_trj"))
+                if len(paths) == 0:
+                    raise RuntimeError(f"There is no velocity data for run {run}.")
+                else:
+                    trj_type = "dump"
+            else:
+                trj_type = "vector"
+
+            if len(paths) > 1:
                 raise NotImplementedError(
-                    f"Cannot handle multiple com velocity files from run {run}."
+                    f"Cannot handle multiple velocity files from run {run}."
                 )
 
             species = [x for x in self.species.values()]
@@ -1545,7 +1553,10 @@ class Diffusivity(seamm.Node):
                 self._Ms = [[] for i in range(n_species)]
                 self._M_errs = [[] for i in range(n_species)]
 
-            metadata, result = read_vector_trajectory(paths[0])
+            if trj_type == "vector":
+                metadata, result = read_vector_trajectory(paths[0])
+            else:
+                metadata, result = read_dump_trajectory(paths[0])
             self._velocity_dt = Q_(metadata["dt"], metadata["tunits"])
 
             # Limit the lengths of the data
@@ -1557,8 +1568,10 @@ class Diffusivity(seamm.Node):
             self._helfand_integral_length = m
 
             # Convert units and remember the factor of 2 in the Helfand moments
-            v_sq = Q_("Å^2/fs^2")
-            constants = (v_sq * self._velocity_dt.to("fs") ** 2).m_as("Å^2") / 2
+            # v_sq = Q_("Å^2/fs^2")
+            # constants = (v_sq * self._velocity_dt.to("fs") ** 2).m_as("Å^2") / 2
+            v_sq = Q_(f"Å^2/{metadata['tunits']}^2")
+            constants = (v_sq * self._velocity_dt**2).m_as("Å^2") / 2
 
             M, err = create_helfand_moments(result, species, m=m)
             for i in range(n_species):
