@@ -274,7 +274,7 @@ class Diffusivity(seamm.Node):
 
         # If requested, calculate the Yeh-Hummer correction for cell size
         correction = None
-        if P["hydrodynamic correction"]:
+        if P["hydrodynamic correction"] and P["viscosity"] > 0:
             if "T" in self._state_vars:
                 T = self._state["T"][-1]
                 if "a" in self._state_vars:
@@ -1057,6 +1057,8 @@ class Diffusivity(seamm.Node):
         ff = self.get_variable("_forcefield")
         if ff == "OpenKIM":
             self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+        elif ff == "PyTorch":
+            self._model = "PyTorch/" + self.get_variable("_pytorch_model")
         else:
             # Valence forcefield...
             self._model = ff.current_forcefield

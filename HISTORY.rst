@@ -1,6 +1,12 @@
 =======
 History
 =======
+2026.3.15 -- Fixed an error with MLFFs and protected the viscosity correction.
+    * Fixed and error with the name of the MLFF, which caused the code to crash after
+      printing the results but before ending.
+    * Protected the hydrodynamic correction using the viscosity if the viscosity given
+      is zero or less, in which case the correction is ignored.
+      
 2026.3.1 -- Internal: switching from deprecated library pkg_resources to importlib
 
 2026.1.8 -- Enhancement to use atomic position and velocity trajectories
