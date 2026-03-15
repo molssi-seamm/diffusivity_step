@@ -1,0 +1,61 @@
+diffusivity\_step package
+=========================
+
+Submodules
+----------
+
+diffusivity\_step.analysis module
+---------------------------------
+
+.. automodule:: diffusivity_step.analysis
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+diffusivity\_step.diffusivity module
+------------------------------------
+
+.. automodule:: diffusivity_step.diffusivity
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+diffusivity\_step.diffusivity\_parameters module
+------------------------------------------------
+
+.. automodule:: diffusivity_step.diffusivity_parameters
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+diffusivity\_step.diffusivity\_step module
+------------------------------------------
+
+.. automodule:: diffusivity_step.diffusivity_step
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+diffusivity\_step.metadata module
+---------------------------------
+
+.. automodule:: diffusivity_step.metadata
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+diffusivity\_step.tk\_diffusivity module
+----------------------------------------
+
+.. automodule:: diffusivity_step.tk_diffusivity
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: diffusivity_step
+   :members:
+   :show-inheritance:
+   :undoc-members:
