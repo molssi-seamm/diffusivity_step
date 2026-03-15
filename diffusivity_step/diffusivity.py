@@ -12,7 +12,7 @@ import time
 import traceback
 
 import numpy as np
-from tabulate import tabulate
+import tabulate
 
 from .analysis import (
     read_dump_trajectory,
@@ -163,7 +163,7 @@ class Diffusivity(seamm.Node):
             ("x", "red", "rgba(255,0,0,0.1)"),
             ("y", "green", "rgba(0,255,0,0.1)"),
             ("z", "blue", "rgba(0,0,255,0.1)"),
-            ("", "black", "rgba(0,0,0,0.1)"),
+            (" ", "black", "rgba(0,0,0,0.1)"),
         ]
 
         self._configuration = None  # The initial configuration
@@ -274,7 +274,7 @@ class Diffusivity(seamm.Node):
 
         # If requested, calculate the Yeh-Hummer correction for cell size
         correction = None
-        if P["hydrodynamic correction"]:
+        if P["hydrodynamic correction"] and P["viscosity"] > 0:
             if "T" in self._state_vars:
                 T = self._state["T"][-1]
                 if "a" in self._state_vars:
@@ -301,16 +301,16 @@ class Diffusivity(seamm.Node):
 
         table = {
             "Run": [],
-            "Method": [],
+            "      Method       ": [],
             "Species": [],
-            "Dx": [],
-            "ex": [],
-            "Dy": [],
-            "ey": [],
-            "Dz": [],
-            "ez": [],
-            "D": [],
-            "e": [],
+            "  Dx  ": [],
+            "  ex  ": [],
+            "  Dy  ": [],
+            "  ey  ": [],
+            "  Dz  ": [],
+            "  ez  ": [],
+            "  D   ": [],
+            "  e   ": [],
         }
         if correction is not None:
             table["Correction"] = []
@@ -448,16 +448,16 @@ class Diffusivity(seamm.Node):
                                         value = round(value, 1)
                                 var = var.replace(",stderr", " ±")
                                 table[var].append(value)
-                            table["Method"].append("MSD")
+                            table["      Method       "].append("MSD".center(20))
                         else:
                             table["Run"].append("")
                             if correction is not None:
                                 table["Correction"].append("")
-                            table["Method"].append("")
+                            table["      Method       "].append("")
                         table["Species"].append(smiles)
                     alpha = self._tensor_labels[i][0]
-                    table["D" + alpha].append(v)
-                    table["e" + alpha].append("")
+                    table["  D" + alpha + "  "].append(v)
+                    table["  e" + alpha + "  "].append("")
 
                 add_msd_trace(
                     plot,
@@ -635,14 +635,16 @@ class Diffusivity(seamm.Node):
                                         value = round(value, 1)
                                 var = var.replace(",stderr", " ±")
                                 table[var].append(value)
-                            table["Method"].append("Helfand Moments")
+                            table["      Method       "].append(
+                                "Helfand Moments".center(20)
+                            )
                         else:
                             table["Run"].append("")
-                            table["Method"].append("")
+                            table["      Method       "].append("")
                         table["Species"].append(smiles)
                     alpha = self._tensor_labels[i][0]
-                    table["D" + alpha].append(v)
-                    table["e" + alpha].append("")
+                    table["  D" + alpha + "  "].append(v)
+                    table["  e" + alpha + "  "].append("")
 
                 add_helfand_trace(
                     plot,
@@ -687,19 +689,23 @@ class Diffusivity(seamm.Node):
                                     table[var].append(t_v)
                                     table[var + " ±"].append(t_e)
                                 if self._use_velocity:
-                                    table["Method"].append("Current MSD Estimate")
+                                    table["      Method       "].append(
+                                        "Current MSD Estimate"
+                                    )
                                 else:
-                                    table["Method"].append("Current Estimate")
+                                    table["      Method       "].append(
+                                        "Current Estimate".center(20)
+                                    )
                             else:
                                 table["Run"].append("")
-                                table["Method"].append("")
+                                table["      Method       "].append("")
                             table["Species"].append(smiles)
 
                         mean = msd_data["mean"][smiles][i][-1]
                         stderr = msd_data["stderr"][smiles][i][-1]
                         alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(mean)
-                        table["e" + alpha].append(stderr)
+                        table["  D" + alpha + "  "].append(mean)
+                        table["  e" + alpha + "  "].append(stderr)
                     if self._use_velocity:
                         if i == 0:
                             if spec == 0:
@@ -717,12 +723,16 @@ class Diffusivity(seamm.Node):
                                     table[var].append(t_v)
                                     table[var + " ±"].append(t_e)
                                 if self._use_msd:
-                                    table["Method"].append("Current HM Estimate")
+                                    table["      Method       "].append(
+                                        "Current HM Estimate".center(20)
+                                    )
                                 else:
-                                    table["Method"].append("Current Estimate")
+                                    table["      Method       "].append(
+                                        "Current Estimate".center(20)
+                                    )
                             else:
                                 table["Run"].append("")
-                                table["Method"].append("")
+                                table["      Method       "].append("")
                             table["Species"].append(smiles)
 
                         mean = M_data["mean"][smiles][i][-1]
@@ -746,10 +756,12 @@ class Diffusivity(seamm.Node):
                                     )
                                     table[var].append(t_v)
                                     table[var + " ±"].append(t_e)
-                                table["Method"].append("Combined Estimate")
+                                table["      Method       "].append(
+                                    "Combined Estimate".center(20)
+                                )
                             else:
                                 table["Run"].append("")
-                                table["Method"].append("")
+                                table["      Method       "].append("")
                             table["Species"].append(smiles)
 
                         mean = M_data["combined mean"][smiles][i][-1]
@@ -760,13 +772,21 @@ class Diffusivity(seamm.Node):
 
         # Print the table of results
         text = ""
-        tmp = tabulate(
+        tabulate.PRESERVE_WHITESPACE = True
+        tmp = tabulate.tabulate(
             table,
             headers="keys",
             tablefmt="rounded_outline",
             disable_numparse=True,
         )
-        if run == 1:
+        tabulate.PRESERVE_WHITESPACE = False
+        if False:
+            length = len(tmp.splitlines()[0])
+            text += "\n"
+            text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
+            text += "\n"
+            text += tmp
+        elif run == 1:
             length = len(tmp.splitlines()[0])
             text += "\n"
             text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
@@ -870,7 +890,7 @@ class Diffusivity(seamm.Node):
                         err = round(e * self._scale, decimals)
                     table["Species"].append(smiles if i == 0 else "")
                     table["Method"].append("MSD" if i == 0 else "")
-                    if self._tensor_labels[i][0] == "":
+                    if self._tensor_labels[i][0] == " ":
                         table["Dir"].append("total")
                         if "D {key} (MSD)" in self.results:
                             self.results["D {key} (MSD)"][smiles] = d_coeff
@@ -922,7 +942,7 @@ class Diffusivity(seamm.Node):
                         err = round(e * self._scale, decimals)
                     table["Species"].append(smiles if i == 0 else "")
                     table["Method"].append("Helfand Moments" if i == 0 else "")
-                    if self._tensor_labels[i][0] == "":
+                    if self._tensor_labels[i][0] == " ":
                         table["Dir"].append("total")
                         if "D {key} (HM)" in self.results:
                             self.results["D {key} (HM)"][smiles] = d_coeff
@@ -974,7 +994,7 @@ class Diffusivity(seamm.Node):
                         err = round(e * self._scale, decimals)
                     table["Species"].append(smiles if i == 0 else "")
                     table["Method"].append("Combined" if i == 0 else "")
-                    if self._tensor_labels[i][0] == "":
+                    if self._tensor_labels[i][0] == " ":
                         table["Dir"].append("total")
                         if "D {key}" in self.results:
                             self.results["D {key}"][smiles] = d_coeff
@@ -1031,7 +1051,8 @@ class Diffusivity(seamm.Node):
                 table["95%"].append("")
 
         text = ""
-        tmp = tabulate(
+        tabulate.PRESERVE_WHITESPACE = True
+        tmp = tabulate.tabulate(
             table,
             headers="keys",
             tablefmt="rounded_outline",
@@ -1044,6 +1065,7 @@ class Diffusivity(seamm.Node):
                 "decimal",
             ),
         )
+        tabulate.PRESERVE_WHITESPACE = False
         length = len(tmp.splitlines()[0])
         text += "\n"
         text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
@@ -1057,6 +1079,8 @@ class Diffusivity(seamm.Node):
         ff = self.get_variable("_forcefield")
         if ff == "OpenKIM":
             self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+        elif ff == "PyTorch":
+            self._model = "PyTorch/" + self.get_variable("_pytorch_model")
         else:
             # Valence forcefield...
             self._model = ff.current_forcefield
@@ -1269,7 +1293,7 @@ class Diffusivity(seamm.Node):
                 f"{100*len(x)/self.n_molecules:.2f}" for x in self.species.values()
             ],
         }
-        tmp = tabulate(
+        tmp = tabulate.tabulate(
             table,
             headers="keys",
             tablefmt="simple_outline",
