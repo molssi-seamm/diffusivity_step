@@ -1027,7 +1027,7 @@ class Diffusivity(seamm.Node):
 
         # If requested, calculate the Yeh-Hummer correction for cell size
         correction = None
-        if P["hydrodynamic correction"]:
+        if P["hydrodynamic correction"] and P["viscosity"] > 0:
             if "T" in self._state_vars:
                 T = self._state["T"][-1]
                 if "a" in self._state_vars:
@@ -1164,12 +1164,19 @@ class Diffusivity(seamm.Node):
             )
 
         correction = P["hydrodynamic correction"]
+        viscosity = P["viscosity"]
+        if not self.is_expr(viscosity):
+            try:
+                if viscosity.magnitude <= 0:
+                    correction = "no"
+            except Exception:
+                pass
 
         if isinstance(correction, str) and self.is_expr(correction):
             text += (
                 f" The expression '{correction}' will determine whether to use the "
                 "Yeh-Hummer hydrodynamic correction for the finite cell size using "
-                f"a viscosity of {P['viscosity']}."
+                f"a viscosity of {viscosity}."
             )
         else:
             if isinstance(correction, str):
@@ -1178,7 +1185,7 @@ class Diffusivity(seamm.Node):
                 text += (
                     " The calculated diffusivity will be corrected for the finite cell "
                     "size using the Yeh-Hummer hydrodynamic correction using "
-                    f"a viscosity of {P['viscosity']}."
+                    f"a viscosity of {viscosity}."
                 )
 
         text += "\n\n"

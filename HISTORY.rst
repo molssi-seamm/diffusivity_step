@@ -1,6 +1,11 @@
 =======
 History
 =======
+2026.3.26 -- Bugfix: Corrected handling of viscosity <= 0.0
+    * Ignore the hydrostatic correction if the given viscosity is less than or equal
+      to 0. This allows a flowchart to work more simply whether the viscosity os know or
+      not.
+
 2026.3.15 -- Fixed an error with MLFFs and protected the viscosity correction.
     * Fixed and error with the name of the MLFF, which caused the code to crash after
       printing the results but before ending.
