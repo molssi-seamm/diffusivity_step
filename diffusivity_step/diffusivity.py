@@ -1075,15 +1075,20 @@ class Diffusivity(seamm.Node):
 
         printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
 
-        # And store results, only for the full output at the end
-        ff = self.get_variable("_forcefield")
-        if ff == "OpenKIM":
-            self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
-        elif ff == "PyTorch":
-            self._model = "PyTorch/" + self.get_variable("_pytorch_model")
+        # And store results, only for the full output at the end. The model is
+        # the model chemistry's level if there is one (as LAMMPS uses it),
+        # else the Forcefield step's forcefield.
+        if self.variable_exists("_model_chemistry"):
+            self._model = self.get_variable("_model_chemistry")["level"]
         else:
-            # Valence forcefield...
-            self._model = ff.current_forcefield
+            ff = self.get_variable("_forcefield")
+            if ff == "OpenKIM":
+                self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+            elif ff == "PyTorch":
+                self._model = "PyTorch/" + self.get_variable("_pytorch_model")
+            else:
+                # Valence forcefield...
+                self._model = ff.current_forcefield
 
         self.store_results(
             configuration=self.configuration,

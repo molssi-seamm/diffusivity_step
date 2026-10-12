@@ -1,6 +1,10 @@
 =======
 History
 =======
+2026.10.12 -- Model chemistries
+    * The results name the model chemistry (e.g. ``FF@OPLS-AA``) when LAMMPS uses one,
+      rather than requiring a Forcefield step.
+
 2026.3.26 -- Bugfix: Corrected handling of viscosity <= 0.0
     * Ignore the hydrostatic correction if the given viscosity is less than or equal
       to 0. This allows a flowchart to work more simply whether the viscosity os know or
