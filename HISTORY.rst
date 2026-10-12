@@ -2,7 +2,7 @@
 History
 =======
 2026.10.12 -- Model chemistries
-    * The results name the model chemistry (e.g. ``FF@OPLS-AA``) when LAMMPS uses one,
+    * The results name the model chemistry (e.g. ``FF@oplsaa``) when LAMMPS uses one,
       rather than requiring a Forcefield step.
 
 2026.3.26 -- Bugfix: Corrected handling of viscosity <= 0.0
