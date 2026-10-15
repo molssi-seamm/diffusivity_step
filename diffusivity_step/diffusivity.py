@@ -17,6 +17,7 @@ from seamm_md_analysis import (
     fit_slope,
     fmt_err,
     msd_by_species,
+    open_md,
     read_dump_trajectory,
     read_vector_trajectory,
     species_helfand_moments,
@@ -1207,6 +1208,12 @@ class Diffusivity(seamm.Node):
 
         # Remember the configuration
         _, self._configuration = self.get_system_configuration()
+        if self._configuration.periodicity != 3:
+            raise RuntimeError(
+                "The Diffusivity step needs a periodic system: the diffusion "
+                "coefficient of a cluster or molecule is not a bulk property, and "
+                "the finite-size correction needs the cell."
+            )
 
         # Reset parameters if called in e.g. loop
         self._n_molecules = None
@@ -1467,34 +1474,19 @@ class Diffusivity(seamm.Node):
         n_species = len(self.species)
         if self._use_msd:
             tic = time.perf_counter_ns()
-            paths = sorted(run_dir.glob("**/com_positions.trj"))
-
-            if len(paths) == 0:
-                # See if there are atom positions?
-                paths = sorted(run_dir.glob("**/atomic_positions.dump_trj"))
-                if len(paths) == 0:
-                    raise RuntimeError(f"There is no position data for run {run}.")
-                else:
-                    trj_type = "dump"
-            else:
-                trj_type = "vector"
-
-            if len(paths) > 1:
-                raise NotImplementedError(
-                    f"Cannot handle multiple position files from run {run}."
-                )
-
             species = [x for x in self.species.values()]
 
             if self._msds is None:
                 self._msds = [[] for i in range(n_species)]
                 self._msd_errs = [[] for i in range(n_species)]
 
-            if trj_type == "vector":
-                metadata, result = read_vector_trajectory(paths[0])
+            series = self._read_h5md(run, run_dir, "position", "Å")
+            if series is not None:
+                result = series.values
+                self._msd_dt = series.dt
             else:
-                metadata, result = read_dump_trajectory(paths[0])
-            self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
+                result = self._read_legacy_positions(run, run_dir)
+            self._check_n_molecules(result, run, "positions")
 
             msd, err = msd_by_species(result, species)
             self._msd_samples = result.shape[0]
@@ -1528,34 +1520,20 @@ class Diffusivity(seamm.Node):
 
         if self._use_velocity:
             tic = time.perf_counter_ns()
-            paths = sorted(run_dir.glob("**/com_velocities.trj"))
-
-            if len(paths) == 0:
-                # See if there are atom positions?
-                paths = sorted(run_dir.glob("**/atomic_velocities.dump_trj"))
-                if len(paths) == 0:
-                    raise RuntimeError(f"There is no velocity data for run {run}.")
-                else:
-                    trj_type = "dump"
-            else:
-                trj_type = "vector"
-
-            if len(paths) > 1:
-                raise NotImplementedError(
-                    f"Cannot handle multiple velocity files from run {run}."
-                )
-
             species = [x for x in self.species.values()]
 
             if self._Ms is None:
                 self._Ms = [[] for i in range(n_species)]
                 self._M_errs = [[] for i in range(n_species)]
 
-            if trj_type == "vector":
-                metadata, result = read_vector_trajectory(paths[0])
+            series = self._read_h5md(run, run_dir, "velocity", "Å/fs")
+            if series is not None:
+                result = series.values
+                self._velocity_dt = series.dt.to("fs")
+                tunits = "fs"
             else:
-                metadata, result = read_dump_trajectory(paths[0])
-            self._velocity_dt = Q_(metadata["dt"], metadata["tunits"])
+                result, tunits = self._read_legacy_velocities(run, run_dir)
+            self._check_n_molecules(result, run, "velocities")
 
             # Limit the lengths of the data
             n = result.shape[0]
@@ -1566,9 +1544,7 @@ class Diffusivity(seamm.Node):
             self._helfand_integral_length = m
 
             # Convert units and remember the factor of 2 in the Helfand moments
-            # v_sq = Q_("Å^2/fs^2")
-            # constants = (v_sq * self._velocity_dt.to("fs") ** 2).m_as("Å^2") / 2
-            v_sq = Q_(f"Å^2/{metadata['tunits']}^2")
+            v_sq = Q_(f"Å^2/{tunits}^2")
             constants = (v_sq * self._velocity_dt**2).m_as("Å^2") / 2
 
             M, err = species_helfand_moments(result, species, m=m)
@@ -1600,6 +1576,111 @@ class Diffusivity(seamm.Node):
                 self.results["t_hm"] = _time
             self._helfand_integral_times.append(_time)
             self.logger.info(f"create_helfand_moments: {_time:.3f}")
+
+    def _read_h5md(self, run, run_dir, name, units):
+        """The molecular (or atomic) positions or velocities from md.h5md, if any.
+
+        Parameters
+        ----------
+        run : int
+            The run number.
+        run_dir : pathlib.Path
+            The run's directory.
+        name : str
+            "position" or "velocity".
+        units : str
+            The units to return them in.
+
+        Returns
+        -------
+        seamm_md_analysis.TimeSeries or None
+            None if no md.h5md in the run has them; then the older files are read.
+        """
+        found = []
+        for path in sorted(run_dir.glob("**/md.h5md")):
+            with open_md(path) as md:
+                for group in ("molecules", "all"):
+                    if md.has_particles(name, group):
+                        found.append((path, group))
+                        break
+        if len(found) == 0:
+            return None
+        if len(found) > 1:
+            raise NotImplementedError(
+                f"Cannot handle {name}s from more than one MD run in run {run}."
+            )
+        path, group = found[0]
+        with open_md(path) as md:
+            return md.particle_series(name, group=group, units=units, time_units="fs")
+
+    def _check_n_molecules(self, values, run, what):
+        """The data must be per molecule, or per atom only if atoms are molecules."""
+        if values.shape[1] != self.n_molecules:
+            raise RuntimeError(
+                f"Run {run} has {what} of {values.shape[1]} particles, but there are "
+                f"{self.n_molecules} molecules. Sample the {what} of the molecules' "
+                "centers of mass in the MD; the atomic ones can be used only when "
+                "each molecule is a single atom."
+            )
+
+    def _read_legacy_positions(self, run, run_dir):
+        """The positions from the files of older versions of the LAMMPS step."""
+        paths = sorted(run_dir.glob("**/com_positions.trj"))
+
+        if len(paths) == 0:
+            # See if there are atom positions?
+            paths = sorted(run_dir.glob("**/atomic_positions.dump_trj"))
+            if len(paths) == 0:
+                raise RuntimeError(f"There is no position data for run {run}.")
+            else:
+                trj_type = "dump"
+        else:
+            trj_type = "vector"
+
+        if len(paths) > 1:
+            raise NotImplementedError(
+                f"Cannot handle multiple position files from run {run}."
+            )
+
+        if trj_type == "vector":
+            metadata, result = read_vector_trajectory(paths[0])
+        else:
+            metadata, result = read_dump_trajectory(paths[0])
+        self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
+        return result
+
+    def _read_legacy_velocities(self, run, run_dir):
+        """The velocities from the files of older versions of the LAMMPS step.
+
+        Returns
+        -------
+        numpy.ndarray, str
+            The velocities, and the time units of the velocities and of the
+            interval, e.g. "fs".
+        """
+        paths = sorted(run_dir.glob("**/com_velocities.trj"))
+
+        if len(paths) == 0:
+            # See if there are atom velocities?
+            paths = sorted(run_dir.glob("**/atomic_velocities.dump_trj"))
+            if len(paths) == 0:
+                raise RuntimeError(f"There is no velocity data for run {run}.")
+            else:
+                trj_type = "dump"
+        else:
+            trj_type = "vector"
+
+        if len(paths) > 1:
+            raise NotImplementedError(
+                f"Cannot handle multiple velocity files from run {run}."
+            )
+
+        if trj_type == "vector":
+            metadata, result = read_vector_trajectory(paths[0])
+        else:
+            metadata, result = read_dump_trajectory(paths[0])
+        self._velocity_dt = Q_(metadata["dt"], metadata["tunits"])
+        return result, metadata["tunits"]
 
     def set_id(self, node_id=()):
         """Sequentially number the subnodes"""

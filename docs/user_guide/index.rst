@@ -24,6 +24,17 @@ molecule with its periodic images. The Yeh-Hummer correction, added to each of t
 coefficients when requested, removes this effect for a cubic cell; it needs the
 viscosity of the fluid.
 
+The step needs a periodic system: the diffusion coefficient of a molecule or cluster
+in vacuum is not a bulk property, and the correction needs the cell. It stops before
+running any MD if the structure is not periodic.
+
+The step reads the positions and velocities from the ``md.h5md`` file that the LAMMPS
+step writes for each MD run, using those of the molecules' centres of mass. Atomic
+positions or velocities can be used only when every molecule is a single atom, as in
+argon; otherwise the step stops with a message asking for the centres of mass. Runs
+made with older versions of the LAMMPS step, which have no ``md.h5md``, are read
+from their text files as before.
+
 ..
     <remove the dots above and this line and unindent the toctree to expose it>
     Contents:
