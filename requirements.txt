@@ -1,7 +1,7 @@
 molsystem
 numpy
 seamm
-seamm-md-analysis>=2026.10.15
+seamm-md-analysis>=2026.10.15.1
 seamm-util
 seamm-widgets
 tabulate

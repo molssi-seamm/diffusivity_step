@@ -1,6 +1,17 @@
 =======
 History
 =======
+2026.10.15.2 -- Analyze MD run earlier in the flowchart
+    * New "MD to analyze" choice: run the MD in the sub-flowchart (as before), the last
+      MD run earlier in the flowchart, the last MD run of each loop iteration, or
+      md.h5md files, including other jobs'. One production run can now feed several
+      analyses. A single run is divided into blocks to estimate the errors.
+    * Before the job runs, the step checks that the MD will sample the positions and
+      velocities it needs, and the job does not start if it does not. When it runs its
+      own MD, it turns on any missing sampling and says so.
+    * The dialog shows only the settings that apply, and hides the sub-flowchart when
+      it is not used.
+
 2026.10.15.1 -- Reads the H5MD files; needs a periodic system
     * Reads the positions and velocities from the ``md.h5md`` files that the LAMMPS step
       now writes, and from the older text files for runs made before.
