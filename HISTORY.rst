@@ -1,6 +1,15 @@
 =======
 History
 =======
+2026.10.15.1 -- Reads the H5MD files; needs a periodic system
+    * Reads the positions and velocities from the ``md.h5md`` files that the LAMMPS step
+      now writes, and from the older text files for runs made before.
+    * Stops before running any MD if the system is not periodic, since the diffusion
+      coefficient of a molecule or cluster is not a bulk property.
+    * Bugfix: atomic positions or velocities were used as if they were molecular when
+      the centres of mass were not sampled, giving wrong results for molecules of more
+      than one atom. The step now stops with a message asking for the centres of mass.
+
 2026.10.15 -- Bugfix: crash with Helfand moments; per-direction coefficients
     * The step stopped with ``KeyError: 'Dx'`` after the second run whenever it used
       Helfand moments (the "Helfand moments" or "both" approach), while printing the
