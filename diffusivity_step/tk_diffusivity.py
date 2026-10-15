@@ -6,6 +6,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from .diffusivity_parameters import DiffusivityParameters
+from seamm_md_analysis.step_support import read_files, run_own_md
 import seamm
 from seamm_util import ureg, Q_, units_class  # noqa: F401
 import seamm_widgets as sw
@@ -160,7 +161,7 @@ class TkDiffusivity(seamm.TkNode):
                 self[key] = P[key].widget(frame)
 
         # and binding to change as needed
-        for key in ("approach", "hydrodynamic correction"):
+        for key in ("md source", "approach", "hydrodynamic correction"):
             self[key].combobox.bind(
                 "<<ComboboxSelected>>", self.reset_diffusivity_frame
             )
@@ -211,8 +212,17 @@ class TkDiffusivity(seamm.TkNode):
         """Layout the widgets in the diffusivity frame
         as needed for the current state"""
 
+        source = self["md source"].get()
         approach = self["approach"].get()
         correction = self["hydrodynamic correction"].get()
+        own_md = source == run_own_md
+
+        # The sub-flowchart is used only when this step runs its own MD
+        notebook = self["notebook"]
+        if own_md:
+            notebook.add(self["flowchart frame"])
+        else:
+            notebook.hide(self["flowchart frame"])
 
         frame = self["diffusivity frame"]
         for slave in frame.grid_slaves():
@@ -223,7 +233,15 @@ class TkDiffusivity(seamm.TkNode):
         # Main controls
         widgets = []
         widgets2 = []
-        for key in ("approach", "nruns", "hydrodynamic correction"):
+        keys = ["md source"]
+        if own_md:
+            keys.append("nruns")
+        elif source == read_files:
+            keys.append("md files")
+        if not own_md:
+            keys.append("number of blocks")
+        keys += ["approach", "hydrodynamic correction"]
+        for key in keys:
             self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
             widgets.append(self[key])
             row += 1
@@ -232,10 +250,11 @@ class TkDiffusivity(seamm.TkNode):
                 self[key].grid(row=row, column=1, sticky=tk.W)
                 widgets2.append(self[key])
                 row += 1
-        for key in ("errors",):
-            self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
-            widgets.append(self[key])
-            row += 1
+        if own_md:
+            for key in ("errors",):
+                self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
+                widgets.append(self[key])
+                row += 1
         if approach == "both" or "MSD" in approach:
             for key in ("msd_fit_start", "msd_fit_end"):
                 self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)

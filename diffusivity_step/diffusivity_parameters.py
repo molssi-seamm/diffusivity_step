@@ -3,6 +3,7 @@
 Control parameters for the Diffusivity step in a SEAMM flowchart
 """
 
+from seamm_md_analysis.step_support import run_own_md, source_parameters
 import logging
 import seamm
 
@@ -73,6 +74,7 @@ class DiffusivityParameters(seamm.Parameters):
     """
 
     parameters = {
+        **source_parameters("the diffusivity"),
         "approach": {
             "default": "both",
             "kind": "enum",
@@ -94,6 +96,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "Number of runs to average:",
             "help_text": "The number for separate runs to average.",
+            "applies_when": {"md source": run_own_md},
         },
         "hydrodynamic correction": {
             "default": "no",
@@ -171,6 +174,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "s",
             "description": "On errors",
             "help_text": "How to handle errors in the runs",
+            "applies_when": {"md source": run_own_md},
         },
         "results": {
             "default": {},

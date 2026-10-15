@@ -24,6 +24,13 @@ from seamm_md_analysis import (
     yeh_hummer_correction,
 )
 from seamm_md_analysis.plots import add_helfand_trace, add_msd_trace
+from seamm_md_analysis.requirements import Need, Requirements
+from seamm_md_analysis.step_support import (
+    check_md_flowchart,
+    md_inputs,
+    request_sampling,
+    run_own_md,
+)
 
 import diffusivity_step
 import molsystem
@@ -1107,7 +1114,13 @@ class Diffusivity(seamm.Node):
             )
         else:
             text = f"Calculate the diffusivity using the {P['approach']} approach"
-        text += f", averaging over {P['nruns']} runs."
+        source = P.get("md source", run_own_md)
+        if source == run_own_md:
+            text += f", averaging over {P['nruns']} runs."
+        elif source == "files":
+            text += f", from the MD in {P['md files']}."
+        else:
+            text += f", from {source} earlier in the flowchart."
 
         if "Helfand" not in P["approach"]:
             text += (
@@ -1158,10 +1171,11 @@ class Diffusivity(seamm.Node):
         self.subflowchart.executor = self.flowchart.executor
         self.subflowchart.in_jobserver = self.subflowchart.in_jobserver
 
-        if not short:
+        if not short and source == run_own_md:
             # Get the first real node
             node = self.subflowchart.get_node("1").next()
-            node.all_options = self.all_options
+            if node is not None:
+                node.all_options = self.all_options
 
             while node is not None:
                 try:
@@ -1291,6 +1305,8 @@ class Diffusivity(seamm.Node):
         # Find the handler for job.out and set the level up
         job_handler = None
         out_handler = None
+        job_level = None
+        out_level = None
         for handler in job.handlers:
             if (
                 isinstance(handler, logging.FileHandler)
@@ -1303,6 +1319,128 @@ class Diffusivity(seamm.Node):
                 out_handler = handler
                 out_level = out_handler.level
                 out_handler.setLevel(printing.JOB)
+
+        self._handlers = (job_handler, job_level, out_handler, out_level)
+        if P["md source"] == run_own_md:
+            self._run_replicas(P)
+        else:
+            self._analyze_earlier_md(P)
+
+        # Remove any redirection of printing.
+        if self._file_handler is not None:
+            self._file_handler.close()
+            job.removeHandler(self._file_handler)
+            self._file_handler = None
+        if job_handler is not None:
+            job_handler.setLevel(job_level)
+        if out_handler is not None:
+            out_handler.setLevel(out_level)
+
+        # Analyze the results
+        if self._scale is None:
+            # No run gave results, e.g. every run failed with errors set to continue
+            raise RuntimeError(
+                "None of the runs gave results, so there is nothing to analyze."
+            )
+        self.analyze(P=P, style="full")
+
+        # Add other citations here or in the appropriate place in the code.
+        # Add the bibtex to data/references.bib, and add a self.reference.cite
+        # similar to the above to actually add the citation to the references.
+
+        return next_node
+
+    def md_requirements(self, P=None):
+        """What the analysis needs from the MD.
+
+        Parameters
+        ----------
+        P : dict = None
+            The parameters, as values; by default the current ones.
+
+        Returns
+        -------
+        seamm_md_analysis.Requirements
+        """
+        approach = self._static("approach") if P is None else P["approach"]
+        approach = str(approach).lower()
+        needs = []
+        if approach == "both" or "msd" in approach:
+            needs.append(
+                Need(
+                    ["molecules/position", "all/position"],
+                    max_time="1 ps",
+                    sample_time="100 fs",
+                    why="the mean square displacement",
+                )
+            )
+        if approach == "both" or "helfand" in approach:
+            needs.append(
+                Need(
+                    ["molecules/velocity", "all/velocity"],
+                    max_time="20 fs",
+                    sample_time="10 fs",
+                    why="the Helfand moments",
+                )
+            )
+        return Requirements(needs=needs, periodic=True)
+
+    def _static(self, key):
+        """A parameter's value without evaluating variables, or None."""
+        parameter = self.parameters[key]
+        if parameter.is_expr:
+            return None
+        return parameter.get()
+
+    def check_flowchart(self, preceding):
+        """Check, before the job runs, that the MD will sample what is needed.
+
+        Parameters
+        ----------
+        preceding : [seamm.Node]
+            The steps that run before this one.
+
+        Returns
+        -------
+        [str]
+            A description of each problem; empty if none.
+        """
+        source = self._static("md source")
+        if source is None or self._static("approach") is None:
+            return []
+        return check_md_flowchart(self, preceding, self.md_requirements(), source)
+
+    def check_configuration(self, configuration):
+        """Called by an MD step before it runs MD that this step will analyze.
+
+        Raises
+        ------
+        RuntimeError
+            If the system is not periodic.
+        """
+        source = self._static("md source")
+        if source == run_own_md:
+            return
+        if configuration.periodicity != 3:
+            raise RuntimeError(
+                f"'{self.title}' will analyze the MD, but the system is not "
+                "periodic: the diffusion coefficient of a cluster or molecule is not "
+                "a bulk property, and the finite-size correction needs the cell."
+            )
+
+    def _run_replicas(self, P):
+        """Run the MD in the sub-flowchart several times and analyze each run."""
+        job_handler, job_level, out_handler, out_level = self._handlers
+
+        # Turn on any sampling the analysis needs but the MD lacks
+        changes, missing = request_sampling(self.subflowchart, self.md_requirements(P))
+        for change in changes:
+            printer.job(__(f"Note: {change}.", indent=self.indent + 4 * " "))
+        if len(missing) > 0:
+            raise RuntimeError(
+                "The MD in the sub-flowchart cannot provide what is needed: "
+                + " ".join(missing)
+            )
 
         # Make sure the subflowchart has the data from the parent flowchart
         self.subflowchart.root_directory = self.flowchart.root_directory
@@ -1377,30 +1515,6 @@ class Diffusivity(seamm.Node):
 
             self.logger.debug(f"End of run {run}")
 
-        # Remove any redirection of printing.
-        if self._file_handler is not None:
-            self._file_handler.close()
-            job.removeHandler(self._file_handler)
-            self._file_handler = None
-        if job_handler is not None:
-            job_handler.setLevel(job_level)
-        if out_handler is not None:
-            out_handler.setLevel(out_level)
-
-        # Analyze the results
-        if self._scale is None:
-            # No run gave results, e.g. every run failed with errors set to continue
-            raise RuntimeError(
-                "None of the runs gave results, so there is nothing to analyze."
-            )
-        self.analyze(P=P, style="full")
-
-        # Add other citations here or in the appropriate place in the code.
-        # Add the bibtex to data/references.bib, and add a self.reference.cite
-        # similar to the above to actually add the citation to the references.
-
-        return next_node
-
     def parse_molecules(self):
         """Get the lists of molecules of each type.
 
@@ -1421,18 +1535,22 @@ class Diffusivity(seamm.Node):
                 result[smiles].append(molecule)
         return result
 
-    def process_run(self, run, run_dir, P=None):
+    def process_run(self, run, run_dir, P=None, data=None):
         """Get the positions and velocities from the run and do initial processing.
 
         Parameters
         ----------
         run : int
             The run number
-        run_dir : pathlib.Path
-            The toplevel directory of the run.
+        run_dir : pathlib.Path or None
+            The toplevel directory of the run, or None if `data` is given.
         P : [str: any]
            Dictionary of control parameters, or default of None in which case the
            standard parameters are used.
+        data : dict = None
+            The run's data, already read: "position" and "velocity" (TimeSeries or
+            None) and "state" ({"T": float, "a": float}, either may be missing).
+            Used for MD analyzed from earlier in the flowchart or from files.
         """
         if P is None:
             P = self.parameters.current_values_to_dict(
@@ -1445,7 +1563,7 @@ class Diffusivity(seamm.Node):
             self._state = {}
 
         self._state_vars = []
-        for variable in (
+        state_variables = (
             "T",
             "T,stderr",
             "P",
@@ -1456,7 +1574,8 @@ class Diffusivity(seamm.Node):
             "a,stderr",
             "V",
             "V,stderr",
-        ):
+        )
+        for variable in state_variables if data is None else ():
             if self.variable_exists(variable):
                 if variable not in self._state:
                     self._state[variable] = []
@@ -1470,6 +1589,11 @@ class Diffusivity(seamm.Node):
                             self._state[var2] = []
                         self._state[var2].append("")
                         self._state_vars.append(var2)
+        if data is not None:
+            for variable, value in data.get("state", {}).items():
+                for var, v in ((variable, value), (f"{variable},stderr", "")):
+                    self._state.setdefault(var, []).append(v)
+                    self._state_vars.append(var)
 
         n_species = len(self.species)
         if self._use_msd:
@@ -1480,7 +1604,12 @@ class Diffusivity(seamm.Node):
                 self._msds = [[] for i in range(n_species)]
                 self._msd_errs = [[] for i in range(n_species)]
 
-            series = self._read_h5md(run, run_dir, "position", "Å")
+            if data is not None:
+                series = data["position"]
+                if series is None:
+                    raise RuntimeError(f"There is no position data for run {run}.")
+            else:
+                series = self._read_h5md(run, run_dir, "position", "Å")
             if series is not None:
                 result = series.values
                 self._msd_dt = series.dt
@@ -1526,7 +1655,12 @@ class Diffusivity(seamm.Node):
                 self._Ms = [[] for i in range(n_species)]
                 self._M_errs = [[] for i in range(n_species)]
 
-            series = self._read_h5md(run, run_dir, "velocity", "Å/fs")
+            if data is not None:
+                series = data["velocity"]
+                if series is None:
+                    raise RuntimeError(f"There is no velocity data for run {run}.")
+            else:
+                series = self._read_h5md(run, run_dir, "velocity", "Å/fs")
             if series is not None:
                 result = series.values
                 self._velocity_dt = series.dt.to("fs")
@@ -1576,6 +1710,109 @@ class Diffusivity(seamm.Node):
                 self.results["t_hm"] = _time
             self._helfand_integral_times.append(_time)
             self.logger.info(f"create_helfand_moments: {_time:.3f}")
+
+    def _analyze_earlier_md(self, P):
+        """Analyze MD run earlier in the flowchart, or in other jobs."""
+        job_handler, job_level, out_handler, out_level = self._handlers
+
+        # The last run that sampled the first need, as checked before the job ran
+        paths = None
+        for name in self.md_requirements(P).needs[0].names:
+            try:
+                paths = md_inputs(self, P, name=name)
+                break
+            except RuntimeError:
+                continue
+        if paths is None:
+            paths = md_inputs(self, P)
+
+        runs = []
+        for path in paths:
+            runs.append(self._read_md_file(path))
+
+        text = f"Analyzing {len(paths)} MD run{'s' if len(paths) > 1 else ''}"
+        if len(runs) == 1:
+            n_blocks = P["number of blocks"]
+            runs = self._split_into_blocks(runs[0], n_blocks)
+            text += f", divided into {len(runs)} blocks to estimate the errors"
+        text += ": " + ", ".join(str(p) for p in paths)
+        printer.job(__(text, indent=self.indent + 4 * " "))
+        printer.job("")
+
+        P["nruns"] = len(runs)
+        for run, data in enumerate(runs, start=1):
+            self.process_run(run, None, P, data=data)
+            if job_handler is not None:
+                job_handler.setLevel(job_level)
+            if out_handler is not None:
+                out_handler.setLevel(out_level)
+            self.analyze_run(P=P, run=run)
+            if job_handler is not None:
+                job_handler.setLevel(printing.JOB)
+            if out_handler is not None:
+                out_handler.setLevel(printing.JOB)
+
+    def _read_md_file(self, path):
+        """Read what the analysis needs from one md.h5md.
+
+        Returns
+        -------
+        dict
+            "position" and "velocity" (TimeSeries or None), and "state".
+        """
+        data = {"position": None, "velocity": None, "state": {}}
+        with open_md(path) as md:
+            if not md.periodic:
+                raise RuntimeError(
+                    f"The MD in {path} is not periodic, so it has no diffusivity."
+                )
+            for name, units, use in (
+                ("position", "Å", self._use_msd),
+                ("velocity", "Å/fs", self._use_velocity),
+            ):
+                if not use:
+                    continue
+                for group in ("molecules", "all"):
+                    if md.has_particles(name, group):
+                        data[name] = md.particle_series(
+                            name, group=group, units=units, time_units="fs"
+                        )
+                        break
+            if md.has_observable("temperature"):
+                T = md.observable("temperature", units="K").values.mean()
+                data["state"]["T"] = round(float(T), 2)
+            box = md.box() if md.cell() is not None else None
+            if box is not None:
+                a = np.linalg.norm(box.values[:, 0, :], axis=1).mean()
+                data["state"]["a"] = round(float(a), 4)
+        return data
+
+    @staticmethod
+    def _split_into_blocks(data, n_blocks):
+        """Divide one run into consecutive blocks, analyzed as separate runs."""
+        n_blocks = max(1, int(n_blocks))
+        blocks = [dict(data, state=dict(data["state"])) for _ in range(n_blocks)]
+        for name in ("position", "velocity"):
+            series = data[name]
+            if series is None:
+                continue
+            n = len(series) // n_blocks
+            if n < 10:
+                raise RuntimeError(
+                    f"The run has only {len(series)} samples of the {name}s, too few "
+                    f"for {n_blocks} blocks."
+                )
+            for i in range(n_blocks):
+                part = slice(i * n, (i + 1) * n)
+                blocks[i][name] = type(series)(
+                    name=series.name,
+                    values=series.values[part],
+                    times=series.times[part],
+                    steps=series.steps[part],
+                    units=series.units,
+                    time_units=series.time_units,
+                )
+        return blocks
 
     def _read_h5md(self, run, run_dir, name, units):
         """The molecular (or atomic) positions or velocities from md.h5md, if any.

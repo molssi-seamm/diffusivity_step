@@ -71,3 +71,39 @@ def test_atomic_data_must_be_per_molecule():
     d._check_n_molecules(np.zeros((3, 2, 3)), 1, "positions")
     with pytest.raises(RuntimeError, match="centers of mass"):
         d._check_n_molecules(np.zeros((3, 6, 3)), 1, "positions")
+
+
+def test_requirements_follow_the_approach():
+    d = step()
+    req = d.md_requirements({"approach": "both"})
+    assert [n.names[0] for n in req.needs] == [
+        "molecules/position",
+        "molecules/velocity",
+    ]
+    assert req.periodic
+    req = d.md_requirements({"approach": "Mean Square Displacement (MSD)"})
+    assert [n.names[0] for n in req.needs] == ["molecules/position"]
+    req = d.md_requirements({"approach": "Helfand moments"})
+    assert [n.names[0] for n in req.needs] == ["molecules/velocity"]
+
+
+def test_blocks_split_one_run():
+    from seamm_md_analysis import TimeSeries
+
+    values = np.arange(100 * 2 * 3, dtype=float).reshape(100, 2, 3)
+    series = TimeSeries(
+        name="molecules/position",
+        values=values,
+        times=np.arange(100) * 10.0,
+        steps=np.arange(100) * 10,
+        units=None,
+        time_units=None,
+    )
+    data = {"position": series, "velocity": None, "state": {"T": 300.0}}
+    blocks = Diffusivity._split_into_blocks(data, 4)
+    assert len(blocks) == 4
+    assert [len(b["position"]) for b in blocks] == [25] * 4
+    assert np.array_equal(blocks[1]["position"].values, values[25:50])
+    assert blocks[3]["state"] == {"T": 300.0}
+    with pytest.raises(RuntimeError, match="too few"):
+        Diffusivity._split_into_blocks(data, 20)
