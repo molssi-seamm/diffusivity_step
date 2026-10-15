@@ -21,8 +21,13 @@ spread of the values over the runs, so at least two runs are needed.
 
 In a periodic cell the diffusion is slowed by the hydrodynamic interaction of a
 molecule with its periodic images. The Yeh-Hummer correction, added to each of the
-coefficients when requested, removes this effect for a cubic cell; it needs the
-viscosity of the fluid.
+coefficients, removes this effect for a cubic cell. It needs the viscosity of the
+fluid, which by default (**Viscosity from**: the preceding Viscosity step) comes
+from the last Viscosity step run before this one; the output says which value was
+used, and notes if it is for a different temperature. If there is no Viscosity step,
+the correction is skipped with a note. A viscosity can also be given instead, and
+**Correction for cell size** turns the correction off. Flowcharts written before the
+Viscosity step existed keep the viscosity they give.
 
 The step needs a periodic system: the diffusion coefficient of a molecule or cluster
 in vacuum is not a bulk property, and the correction needs the cell. It stops before

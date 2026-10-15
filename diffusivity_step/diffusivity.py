@@ -28,6 +28,7 @@ from seamm_md_analysis.requirements import Need, Requirements
 from seamm_md_analysis.step_support import (
     check_md_flowchart,
     md_inputs,
+    preceding_viscosity,
     request_sampling,
     run_own_md,
 )
@@ -251,7 +252,7 @@ class Diffusivity(seamm.Node):
 
         # If requested, calculate the Yeh-Hummer correction for cell size
         correction = None
-        if P["hydrodynamic correction"] and P["viscosity"] > 0:
+        if self._eta is not None:
             if "T" in self._state_vars:
                 T = self._state["T"][-1]
                 if "a" in self._state_vars:
@@ -260,9 +261,7 @@ class Diffusivity(seamm.Node):
                     L = self._configuration.cell.a
                 L = Q_(L, "Å")
 
-                correction = yeh_hummer_correction(
-                    T, L.m_as("m"), P["viscosity"].m_as("Pa*s")
-                )
+                correction = yeh_hummer_correction(T, L.m_as("m"), self._eta)
             else:
                 if run == 1:
                     text = (
@@ -996,7 +995,7 @@ class Diffusivity(seamm.Node):
 
         # If requested, calculate the Yeh-Hummer correction for cell size
         correction = None
-        if P["hydrodynamic correction"] and P["viscosity"] > 0:
+        if self._eta is not None:
             if "T" in self._state_vars:
                 T = self._state["T"][-1]
                 if "a" in self._state_vars:
@@ -1005,9 +1004,7 @@ class Diffusivity(seamm.Node):
                     L = self._configuration.cell.a
                 L = Q_(L, "Å")
 
-                correction = yeh_hummer_correction(
-                    T, L.m_as("m"), P["viscosity"].m_as("Pa*s")
-                )
+                correction = yeh_hummer_correction(T, L.m_as("m"), self._eta)
                 table["Species"].append("")
                 table["Method"].append("Correction")
                 table["Dir"].append("")
@@ -1039,6 +1036,21 @@ class Diffusivity(seamm.Node):
         text += "\n"
 
         printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
+
+        # The viscosity should be for the same temperature
+        if (
+            correction is not None
+            and self._eta_T is not None
+            and abs(T - self._eta_T) > 2.0
+        ):
+            printer.normal(
+                __(
+                    f"Note: the viscosity is for {self._eta_T:.1f} K but the MD here "
+                    f"is at {T:.1f} K, so the Yeh-Hummer correction is approximate.",
+                    indent=8 * " ",
+                )
+            )
+            printer.normal("")
 
         # And store results, only for the full output at the end. The model is
         # the model chemistry's level if there is one (as LAMMPS uses it),
@@ -1088,6 +1100,60 @@ class Diffusivity(seamm.Node):
             node = node.create_parser()
 
         return self.next()
+
+    def _viscosity_for_correction(self, P):
+        """The viscosity for the Yeh-Hummer correction, and where it came from.
+
+        Parameters
+        ----------
+        P : dict
+            The values of the parameters.
+
+        Returns
+        -------
+        float or None
+            The viscosity in Pa s, or None if the correction is not applied.
+        float or None
+            The temperature of the Viscosity step, in K, if it came from one.
+        str or None
+            A note for the output.
+        """
+        if not P["hydrodynamic correction"]:
+            return None, None, None
+        if P.get("viscosity source", "given value") == "given value":
+            eta = P["viscosity"]
+            if eta.magnitude <= 0:
+                return (
+                    None,
+                    None,
+                    "Note: the Yeh-Hummer correction is skipped because the "
+                    "viscosity given is not positive.",
+                )
+            return (
+                eta.m_as("Pa*s"),
+                None,
+                f"The Yeh-Hummer correction uses the given viscosity, {eta:~P}.",
+            )
+        record = preceding_viscosity(self)
+        if record is None:
+            return (
+                None,
+                None,
+                "Note: the Yeh-Hummer correction is skipped because no Viscosity "
+                "step ran before this one. Add one, or give the viscosity.",
+            )
+        eta = Q_(record["value"], "Pa*s").m_as("mPa*s")
+        text = f"The Yeh-Hummer correction uses the viscosity, {eta:.4g}"
+        if record.get("stderr") is not None:
+            text += f" ± {Q_(record['stderr'], 'Pa*s').m_as('mPa*s'):.2g}"
+        text += (
+            f" mPa*s, from step {record['id']} ({record['step']}, "
+            f"{record['method']}"
+        )
+        if record.get("T") is not None:
+            text += f", at {record['T']:.1f} K"
+        text += ")."
+        return record["value"], record.get("T"), text
 
     def description_text(self, P=None, short=False):
         """Create the text description of what this step will do.
@@ -1140,19 +1206,10 @@ class Diffusivity(seamm.Node):
             )
 
         correction = P["hydrodynamic correction"]
-        viscosity = P["viscosity"]
-        if not self.is_expr(viscosity):
-            try:
-                if viscosity.magnitude <= 0:
-                    correction = "no"
-            except Exception:
-                pass
-
         if isinstance(correction, str) and self.is_expr(correction):
             text += (
                 f" The expression '{correction}' will determine whether to use the "
-                "Yeh-Hummer hydrodynamic correction for the finite cell size using "
-                f"a viscosity of {viscosity}."
+                "Yeh-Hummer hydrodynamic correction for the finite cell size."
             )
         else:
             if isinstance(correction, str):
@@ -1160,9 +1217,15 @@ class Diffusivity(seamm.Node):
             if correction:
                 text += (
                     " The calculated diffusivity will be corrected for the finite cell "
-                    "size using the Yeh-Hummer hydrodynamic correction using "
-                    f"a viscosity of {viscosity}."
+                    "size using the Yeh-Hummer hydrodynamic correction"
                 )
+                if P.get("viscosity source", "given value") == "given value":
+                    text += f" with a viscosity of {P['viscosity']}."
+                else:
+                    text += (
+                        " with the viscosity from the preceding Viscosity step, if "
+                        "there is one."
+                    )
 
         text += "\n\n"
 
@@ -1269,6 +1332,12 @@ class Diffusivity(seamm.Node):
 
         # Print what we are doing
         printer.important(__(self.description_text(P, short=True), indent=self.indent))
+
+        # The viscosity for the Yeh-Hummer correction, and where it came from
+        self._eta, self._eta_T, text = self._viscosity_for_correction(P)
+        if text is not None:
+            printer.important(__(text, indent=self.indent + 4 * " "))
+            printer.important("")
 
         # Transfer key parameters to results
         self._results = {}

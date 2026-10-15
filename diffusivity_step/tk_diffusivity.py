@@ -161,7 +161,12 @@ class TkDiffusivity(seamm.TkNode):
                 self[key] = P[key].widget(frame)
 
         # and binding to change as needed
-        for key in ("md source", "approach", "hydrodynamic correction"):
+        for key in (
+            "md source",
+            "approach",
+            "hydrodynamic correction",
+            "viscosity source",
+        ):
             self[key].combobox.bind(
                 "<<ComboboxSelected>>", self.reset_diffusivity_frame
             )
@@ -246,7 +251,10 @@ class TkDiffusivity(seamm.TkNode):
             widgets.append(self[key])
             row += 1
         if correction != "no":
-            for key in ("viscosity",):
+            keys = ["viscosity source"]
+            if self["viscosity source"].get() == "given value":
+                keys.append("viscosity")
+            for key in keys:
                 self[key].grid(row=row, column=1, sticky=tk.W)
                 widgets2.append(self[key])
                 row += 1
