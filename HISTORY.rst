@@ -1,7 +1,7 @@
 =======
 History
 =======
-2026.10.14 -- Bugfix: crash with Helfand moments; per-direction coefficients
+2026.10.15 -- Bugfix: crash with Helfand moments; per-direction coefficients
     * The step stopped with ``KeyError: 'Dx'`` after the second run whenever it used
       Helfand moments (the "Helfand moments" or "both" approach), while printing the
       current estimates. It now prints them.
