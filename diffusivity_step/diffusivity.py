@@ -330,9 +330,10 @@ class Diffusivity(seamm.Node):
                 coeffs = msd_data["per_run"][smiles]
                 # Fit the slopes
                 fit = []
-                # Convert units and remember the factor of 1/6 in the Einstein equation
-                factor = Q_("Å^2/ps").m_as("m^2/s") / 6
+                # Convert units and remember the factor of 1/2 in the Einstein
+                # equation for each direction, and 1/6 for the total
                 for i in range(nalpha):
+                    factor = Q_("Å^2/ps").m_as("m^2/s") / (2 if i < 3 else 6)
                     if weighted:
                         slope, err, xs, ys = fit_slope(
                             self._msd[spec][:, i],
@@ -356,10 +357,7 @@ class Diffusivity(seamm.Node):
                         self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
 
                     if correction is not None:
-                        if i < 3:
-                            d_coeff += correction / 3
-                        else:
-                            d_coeff += correction
+                        d_coeff += correction
 
                     msd_data["per_run"][smiles][i].append(d_coeff)
 
@@ -501,9 +499,10 @@ class Diffusivity(seamm.Node):
                 coeffs = M_data["per_run"][smiles]
                 # Fit the slopes
                 fit = []
-                # Convert units and remember the factor of 1/3 in the Einstein equation
-                factor = Q_("Å^2/ps").m_as("m^2/s") / 3
+                # Convert units. The Helfand moments include a factor of 1/2, so the
+                # Einstein equation has 1 for each direction, and 1/3 for the total
                 for i in range(nalpha):
+                    factor = Q_("Å^2/ps").m_as("m^2/s") / (1 if i < 3 else 3)
                     if weighted:
                         slope, err, xs, ys = fit_slope(
                             self._M[spec][:, i],
@@ -524,13 +523,10 @@ class Diffusivity(seamm.Node):
 
                     # Set a scale factor to make the numbers managable
                     if self._scale is None:
-                        self._scale = 10 ** floor(log10(d_coeff))
+                        self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
 
                     if correction is not None:
-                        if i < 3:
-                            d_coeff += correction / 3
-                        else:
-                            d_coeff += correction
+                        d_coeff += correction
 
                     M_data["per_run"][smiles][i].append(d_coeff)
 
@@ -1007,7 +1003,7 @@ class Diffusivity(seamm.Node):
                 table["Species"].append("")
                 table["Method"].append("Correction")
                 table["Dir"].append("")
-                table["D"].append(correction)
+                table["D"].append(f"{correction / self._scale:.3f}")
                 table["±"].append("")
                 table["95%"].append("")
 
@@ -1385,6 +1381,11 @@ class Diffusivity(seamm.Node):
             out_handler.setLevel(out_level)
 
         # Analyze the results
+        if self._scale is None:
+            # No run gave results, e.g. every run failed with errors set to continue
+            raise RuntimeError(
+                "None of the runs gave results, so there is nothing to analyze."
+            )
         self.analyze(P=P, style="full")
 
         # Add other citations here or in the appropriate place in the code.

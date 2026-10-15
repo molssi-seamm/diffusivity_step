@@ -1,14 +1,21 @@
 =======
 History
 =======
-2026.10.14 -- Bugfix: crash with Helfand moments over several runs
+2026.10.14 -- Bugfix: crash with Helfand moments; per-direction coefficients
     * The step stopped with ``KeyError: 'Dx'`` after the second run whenever it used
       Helfand moments (the "Helfand moments" or "both" approach), while printing the
       current estimates. It now prints them.
+    * The diffusion coefficients in x, y and z (Dx, Dy and Dz) were a third of their
+      correct values, and had only a third of the Yeh–Hummer correction: they were
+      the contributions of each direction to D rather than diffusion coefficients.
+      For an isotropic liquid they now equal D. The total D is unchanged by this.
+    * With Helfand moments, the total D is now computed from the sum of the moments
+      in x, y and z, as with the MSD, rather than from the summed velocities, whose
+      cross terms added noise. The value changes within its error.
     * The analysis now uses the shared ``seamm_md_analysis`` library, also used by the
-      Thermal Conductivity step, instead of its own copy. The results are the same,
-      and the Helfand moments and mean square displacements are computed much faster
-      (by FFT), which matters for long runs and many molecules.
+      Thermal Conductivity step, instead of its own copy. The Helfand moments and mean
+      square displacements are computed much faster (by FFT), which matters for long
+      runs and many molecules.
     * The MSD graphs now label their y units as Å^2 rather than Å.
 
 2026.10.12 -- Model chemistries
