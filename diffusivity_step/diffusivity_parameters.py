@@ -99,14 +99,29 @@ class DiffusivityParameters(seamm.Parameters):
             "applies_when": {"md source": run_own_md},
         },
         "hydrodynamic correction": {
-            "default": "no",
+            "default": "yes",
             "kind": "boolean",
             "format_string": "s",
             "enumeration": ("no", "yes"),
             "description": "Correction for cell size:",
             "help_text": (
-                "Apply the Yeh-Hummer hydrodynamic correction for the cell size."
+                "Apply the Yeh-Hummer hydrodynamic correction for the cell size, "
+                "which needs the viscosity."
             ),
+        },
+        "viscosity source": {
+            "default": "the preceding Viscosity step",
+            "kind": "enum",
+            "default_units": "",
+            "enumeration": ("the preceding Viscosity step", "given value"),
+            "format_string": "s",
+            "description": "Viscosity from:",
+            "help_text": (
+                "Where the viscosity for the Yeh-Hummer correction comes from: the "
+                "last Viscosity step run before this one, or a value given here. If "
+                "there is no Viscosity step, the correction is skipped with a note."
+            ),
+            "applies_when": {"hydrodynamic correction": "yes"},
         },
         "viscosity": {
             "default": "0.0",
@@ -116,6 +131,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "Viscosity:",
             "help_text": "The viscosity for the Yeh-Hummer cell size correction.",
+            "applies_when": {"viscosity source": "given value"},
         },
         "msd_fit_start": {
             "default": "0.1",
@@ -206,6 +222,11 @@ class DiffusivityParameters(seamm.Parameters):
         """
 
         logger.debug("DiffusivityParameters.__init__")
+
+        # Fix incompatible changes. Before the viscosity could come from a
+        # Viscosity step, it was always given, so keep that for older flowcharts.
+        if data is not None and "viscosity" in data and "viscosity source" not in data:
+            data["viscosity source"] = {"value": "given value", "units": None}
 
         super().__init__(
             defaults={**DiffusivityParameters.parameters, **defaults}, data=data

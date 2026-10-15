@@ -48,3 +48,22 @@ def test_dialog_layouts(tk_node):
         assert (tk_node["md files"].grid_info() != {}) == (source == read_files)
         assert (tk_node["number of blocks"].grid_info() != {}) == (not own)
         assert (notebook.tab(tab, "state") == "hidden") == (not own)
+
+
+def test_viscosity_layouts(tk_node):
+    tk_node.create_dialog()
+    tk_node.reset_dialog()
+    shown = {}
+    for correction in ("no", "yes"):
+        for source in ("the preceding Viscosity step", "given value"):
+            tk_node["hydrodynamic correction"].set(correction)
+            tk_node["viscosity source"].set(source)
+            tk_node.reset_diffusivity_frame()
+            shown[(correction, source)] = (
+                tk_node["viscosity source"].grid_info() != {},
+                tk_node["viscosity"].grid_info() != {},
+            )
+    assert shown[("no", "the preceding Viscosity step")] == (False, False)
+    assert shown[("no", "given value")] == (False, False)
+    assert shown[("yes", "the preceding Viscosity step")] == (True, False)
+    assert shown[("yes", "given value")] == (True, True)

@@ -1,6 +1,15 @@
 =======
 History
 =======
+2026.10.15.3 -- The viscosity for the finite-size correction from a Viscosity step
+    * The Yeh-Hummer correction for the size of the cell uses, by default, the
+      viscosity from the Viscosity step run before this one, and says which value it
+      used, noting if it is for a different temperature. "Viscosity from" chooses it
+      or a given value. If there is no Viscosity step, the correction is skipped with
+      a note.
+    * The correction is now on by default. Flowcharts written before keep the
+      viscosity they give, and the correction they asked for.
+
 2026.10.15.2 -- Analyze MD run earlier in the flowchart
     * New "MD to analyze" choice: run the MD in the sub-flowchart (as before), the last
       MD run earlier in the flowchart, the last MD run of each loop iteration, or
