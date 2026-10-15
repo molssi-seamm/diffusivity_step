@@ -1,6 +1,16 @@
 =======
 History
 =======
+2026.10.14 -- Bugfix: crash with Helfand moments over several runs
+    * The step stopped with ``KeyError: 'Dx'`` after the second run whenever it used
+      Helfand moments (the "Helfand moments" or "both" approach), while printing the
+      current estimates. It now prints them.
+    * The analysis now uses the shared ``seamm_md_analysis`` library, also used by the
+      Thermal Conductivity step, instead of its own copy. The results are the same,
+      and the Helfand moments and mean square displacements are computed much faster
+      (by FFT), which matters for long runs and many molecules.
+    * The MSD graphs now label their y units as Å^2 rather than Å.
+
 2026.10.12 -- Model chemistries
     * The results name the model chemistry (e.g. ``FF@oplsaa``) when LAMMPS uses one,
       rather than requiring a Forcefield step.

@@ -4,7 +4,6 @@
 
 import importlib
 import logging
-import math
 from math import log10, ceil, floor, sqrt
 from pathlib import Path
 import sys
@@ -14,15 +13,17 @@ import traceback
 import numpy as np
 import tabulate
 
-from .analysis import (
+from seamm_md_analysis import (
+    fit_slope,
+    fmt_err,
+    msd_by_species,
     read_dump_trajectory,
     read_vector_trajectory,
-    compute_msd,
-    add_msd_trace,
-    fit_slope,
-    add_helfand_trace,
-    create_helfand_moments,
+    species_helfand_moments,
+    yeh_hummer_correction,
 )
+from seamm_md_analysis.plots import add_helfand_trace, add_msd_trace
+
 import diffusivity_step
 import molsystem
 import seamm
@@ -48,38 +49,6 @@ path = importlib.resources.files("diffusivity_step") / "data"
 csv_file = path / "properties.csv"
 if path.exists():
     molsystem.add_properties_from_file(csv_file)
-
-
-def fmt_err(value, err, precision=2, as_float=False):
-    try:
-        decimals = -ceil(log10(err)) + precision
-    except Exception:
-        e = "--"
-        try:
-            v = f"{value:.3f}"
-            if as_float:
-                v = round(float(v), 3)
-        except Exception:
-            v = value
-    else:
-        if decimals < 0:
-            decimals = 0
-        if as_float:
-            e = round(err, decimals)
-        else:
-            fmt = f".{decimals}f"
-            e = f"{err:{fmt}}"
-        try:
-            if as_float:
-                if abs(value / e) > 1.0e6:
-                    decimals = 6
-                v = round(float(value), decimals)
-                e = round(float(e), decimals)
-            else:
-                v = f"{value:{fmt}}"
-        except Exception:
-            v = value
-    return v, e
 
 
 class Diffusivity(seamm.Node):
@@ -283,13 +252,9 @@ class Diffusivity(seamm.Node):
                     L = self._configuration.cell.a
                 L = Q_(L, "Å")
 
-                correction = (
-                    2.837297
-                    * Q_(1.0, "k_B")
-                    * Q_(T, "K")
-                    / (6 * math.pi * P["viscosity"] * L)
+                correction = yeh_hummer_correction(
+                    T, L.m_as("m"), P["viscosity"].m_as("Pa*s")
                 )
-                correction = float(correction.m_as("m^2/s"))
             else:
                 if run == 1:
                     text = (
@@ -738,8 +703,8 @@ class Diffusivity(seamm.Node):
                         mean = M_data["mean"][smiles][i][-1]
                         stderr = M_data["stderr"][smiles][i][-1]
                         alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(mean)
-                        table["e" + alpha].append(stderr)
+                        table["  D" + alpha + "  "].append(mean)
+                        table["  e" + alpha + "  "].append(stderr)
                     if self._use_msd and self._use_velocity:
                         if i == 0:
                             if spec == 0:
@@ -767,8 +732,8 @@ class Diffusivity(seamm.Node):
                         mean = M_data["combined mean"][smiles][i][-1]
                         stderr = M_data["combined stderr"][smiles][i][-1]
                         alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(mean)
-                        table["e" + alpha].append(stderr)
+                        table["  D" + alpha + "  "].append(mean)
+                        table["  e" + alpha + "  "].append(stderr)
 
         # Print the table of results
         text = ""
@@ -1036,13 +1001,9 @@ class Diffusivity(seamm.Node):
                     L = self._configuration.cell.a
                 L = Q_(L, "Å")
 
-                correction = (
-                    2.837297
-                    * Q_(1.0, "k_B")
-                    * Q_(T, "K")
-                    / (6 * math.pi * P["viscosity"] * L)
+                correction = yeh_hummer_correction(
+                    T, L.m_as("m"), P["viscosity"].m_as("Pa*s")
                 )
-                correction = float(correction.m_as("m^2/s"))
                 table["Species"].append("")
                 table["Method"].append("Correction")
                 table["Dir"].append("")
@@ -1534,7 +1495,7 @@ class Diffusivity(seamm.Node):
                 metadata, result = read_dump_trajectory(paths[0])
             self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
 
-            msd, err = compute_msd(result, species)
+            msd, err = msd_by_species(result, species)
             self._msd_samples = result.shape[0]
 
             for i in range(n_species):
@@ -1609,7 +1570,7 @@ class Diffusivity(seamm.Node):
             v_sq = Q_(f"Å^2/{metadata['tunits']}^2")
             constants = (v_sq * self._velocity_dt**2).m_as("Å^2") / 2
 
-            M, err = create_helfand_moments(result, species, m=m)
+            M, err = species_helfand_moments(result, species, m=m)
             for i in range(n_species):
                 M[i] *= constants
                 err[i] *= constants
