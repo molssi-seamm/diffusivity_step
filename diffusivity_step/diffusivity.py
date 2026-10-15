@@ -4,7 +4,6 @@
 
 import importlib
 import logging
-import math
 from math import log10, ceil, floor, sqrt
 from pathlib import Path
 import sys
@@ -14,15 +13,17 @@ import traceback
 import numpy as np
 import tabulate
 
-from .analysis import (
+from seamm_md_analysis import (
+    fit_slope,
+    fmt_err,
+    msd_by_species,
     read_dump_trajectory,
     read_vector_trajectory,
-    compute_msd,
-    add_msd_trace,
-    fit_slope,
-    add_helfand_trace,
-    create_helfand_moments,
+    species_helfand_moments,
+    yeh_hummer_correction,
 )
+from seamm_md_analysis.plots import add_helfand_trace, add_msd_trace
+
 import diffusivity_step
 import molsystem
 import seamm
@@ -48,38 +49,6 @@ path = importlib.resources.files("diffusivity_step") / "data"
 csv_file = path / "properties.csv"
 if path.exists():
     molsystem.add_properties_from_file(csv_file)
-
-
-def fmt_err(value, err, precision=2, as_float=False):
-    try:
-        decimals = -ceil(log10(err)) + precision
-    except Exception:
-        e = "--"
-        try:
-            v = f"{value:.3f}"
-            if as_float:
-                v = round(float(v), 3)
-        except Exception:
-            v = value
-    else:
-        if decimals < 0:
-            decimals = 0
-        if as_float:
-            e = round(err, decimals)
-        else:
-            fmt = f".{decimals}f"
-            e = f"{err:{fmt}}"
-        try:
-            if as_float:
-                if abs(value / e) > 1.0e6:
-                    decimals = 6
-                v = round(float(value), decimals)
-                e = round(float(e), decimals)
-            else:
-                v = f"{value:{fmt}}"
-        except Exception:
-            v = value
-    return v, e
 
 
 class Diffusivity(seamm.Node):
@@ -283,13 +252,9 @@ class Diffusivity(seamm.Node):
                     L = self._configuration.cell.a
                 L = Q_(L, "Å")
 
-                correction = (
-                    2.837297
-                    * Q_(1.0, "k_B")
-                    * Q_(T, "K")
-                    / (6 * math.pi * P["viscosity"] * L)
+                correction = yeh_hummer_correction(
+                    T, L.m_as("m"), P["viscosity"].m_as("Pa*s")
                 )
-                correction = float(correction.m_as("m^2/s"))
             else:
                 if run == 1:
                     text = (
@@ -365,9 +330,10 @@ class Diffusivity(seamm.Node):
                 coeffs = msd_data["per_run"][smiles]
                 # Fit the slopes
                 fit = []
-                # Convert units and remember the factor of 1/6 in the Einstein equation
-                factor = Q_("Å^2/ps").m_as("m^2/s") / 6
+                # Convert units and remember the factor of 1/2 in the Einstein
+                # equation for each direction, and 1/6 for the total
                 for i in range(nalpha):
+                    factor = Q_("Å^2/ps").m_as("m^2/s") / (2 if i < 3 else 6)
                     if weighted:
                         slope, err, xs, ys = fit_slope(
                             self._msd[spec][:, i],
@@ -391,10 +357,7 @@ class Diffusivity(seamm.Node):
                         self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
 
                     if correction is not None:
-                        if i < 3:
-                            d_coeff += correction / 3
-                        else:
-                            d_coeff += correction
+                        d_coeff += correction
 
                     msd_data["per_run"][smiles][i].append(d_coeff)
 
@@ -536,9 +499,10 @@ class Diffusivity(seamm.Node):
                 coeffs = M_data["per_run"][smiles]
                 # Fit the slopes
                 fit = []
-                # Convert units and remember the factor of 1/3 in the Einstein equation
-                factor = Q_("Å^2/ps").m_as("m^2/s") / 3
+                # Convert units. The Helfand moments include a factor of 1/2, so the
+                # Einstein equation has 1 for each direction, and 1/3 for the total
                 for i in range(nalpha):
+                    factor = Q_("Å^2/ps").m_as("m^2/s") / (1 if i < 3 else 3)
                     if weighted:
                         slope, err, xs, ys = fit_slope(
                             self._M[spec][:, i],
@@ -559,13 +523,10 @@ class Diffusivity(seamm.Node):
 
                     # Set a scale factor to make the numbers managable
                     if self._scale is None:
-                        self._scale = 10 ** floor(log10(d_coeff))
+                        self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
 
                     if correction is not None:
-                        if i < 3:
-                            d_coeff += correction / 3
-                        else:
-                            d_coeff += correction
+                        d_coeff += correction
 
                     M_data["per_run"][smiles][i].append(d_coeff)
 
@@ -738,8 +699,8 @@ class Diffusivity(seamm.Node):
                         mean = M_data["mean"][smiles][i][-1]
                         stderr = M_data["stderr"][smiles][i][-1]
                         alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(mean)
-                        table["e" + alpha].append(stderr)
+                        table["  D" + alpha + "  "].append(mean)
+                        table["  e" + alpha + "  "].append(stderr)
                     if self._use_msd and self._use_velocity:
                         if i == 0:
                             if spec == 0:
@@ -767,8 +728,8 @@ class Diffusivity(seamm.Node):
                         mean = M_data["combined mean"][smiles][i][-1]
                         stderr = M_data["combined stderr"][smiles][i][-1]
                         alpha = self._tensor_labels[i][0]
-                        table["D" + alpha].append(mean)
-                        table["e" + alpha].append(stderr)
+                        table["  D" + alpha + "  "].append(mean)
+                        table["  e" + alpha + "  "].append(stderr)
 
         # Print the table of results
         text = ""
@@ -1036,17 +997,13 @@ class Diffusivity(seamm.Node):
                     L = self._configuration.cell.a
                 L = Q_(L, "Å")
 
-                correction = (
-                    2.837297
-                    * Q_(1.0, "k_B")
-                    * Q_(T, "K")
-                    / (6 * math.pi * P["viscosity"] * L)
+                correction = yeh_hummer_correction(
+                    T, L.m_as("m"), P["viscosity"].m_as("Pa*s")
                 )
-                correction = float(correction.m_as("m^2/s"))
                 table["Species"].append("")
                 table["Method"].append("Correction")
                 table["Dir"].append("")
-                table["D"].append(correction)
+                table["D"].append(f"{correction / self._scale:.3f}")
                 table["±"].append("")
                 table["95%"].append("")
 
@@ -1424,6 +1381,11 @@ class Diffusivity(seamm.Node):
             out_handler.setLevel(out_level)
 
         # Analyze the results
+        if self._scale is None:
+            # No run gave results, e.g. every run failed with errors set to continue
+            raise RuntimeError(
+                "None of the runs gave results, so there is nothing to analyze."
+            )
         self.analyze(P=P, style="full")
 
         # Add other citations here or in the appropriate place in the code.
@@ -1534,7 +1496,7 @@ class Diffusivity(seamm.Node):
                 metadata, result = read_dump_trajectory(paths[0])
             self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
 
-            msd, err = compute_msd(result, species)
+            msd, err = msd_by_species(result, species)
             self._msd_samples = result.shape[0]
 
             for i in range(n_species):
@@ -1609,7 +1571,7 @@ class Diffusivity(seamm.Node):
             v_sq = Q_(f"Å^2/{metadata['tunits']}^2")
             constants = (v_sq * self._velocity_dt**2).m_as("Å^2") / 2
 
-            M, err = create_helfand_moments(result, species, m=m)
+            M, err = species_helfand_moments(result, species, m=m)
             for i in range(n_species):
                 M[i] *= constants
                 err[i] *= constants

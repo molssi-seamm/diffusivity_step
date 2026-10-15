@@ -251,7 +251,7 @@ metadata["results"] = {
         "units": "m^2/s",
     },
     "Dx {key} (MSD),stderr": {
-        "description": "The standard error if thediffusion coefficient in x from MSD",
+        "description": "The standard error of the diffusion coefficient in x from MSD",
         "dimensionality": "{species: value}",
         "property": "Dx,stderr#MSD#{model}",
         "type": "json",
@@ -265,7 +265,7 @@ metadata["results"] = {
         "units": "m^2/s",
     },
     "Dy {key} (MSD),stderr": {
-        "description": "The standard error if thediffusion coefficient in y from MSD",
+        "description": "The standard error of the diffusion coefficient in y from MSD",
         "dimensionality": "{species: value}",
         "property": "Dy,stderr#MSD#{model}",
         "type": "json",
@@ -279,7 +279,7 @@ metadata["results"] = {
         "units": "m^2/s",
     },
     "Dz {key} (MSD),stderr": {
-        "description": "The standard error if thediffusion coefficient in z from MSD",
+        "description": "The standard error of the diffusion coefficient in z from MSD",
         "dimensionality": "{species: value}",
         "property": "Dz,stderr#MSD#{model}",
         "type": "json",
