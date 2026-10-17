@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>History &#8212; SEAMM Diffusivity Plug-in 2026.10.17 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=c224919a" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="_static/documentation_options.js?v=fed69469"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'history';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Development Team" href="authors.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="2026.10.17" />
+  
+    
+    <script src="_static/searchtools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script src="searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/SEAMM logo.png" class="logo__image only-light" alt=""/>
+    <img src="_static/SEAMM Inverted 288x181.png" class="logo__image only-dark pst-js-only" alt=""/>
+  
+  
+    <p class="title logo__title">Diffusivity</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="developer_guide/index.html">
+    Developer Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API Documentation
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="authors.html">
+    Development Team
+  </a>
+</li>
+
+
+<li class=" current active">
+  <a class="nav-link dropdown-item nav-internal" href="#" aria-current="page">
+    History
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://molssi-seamm.github.io">
+    Main SEAMM documentation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://molssi-seamm.github.io">
+    SEAMM Documentation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-external" href="https://molssi.org">
+    MolSSI
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/molssi-seamm/geometry_analysis_step" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/MolSSI_NSF" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-twitter fa-lg" aria-hidden="true"></i><span class="visually-hidden">Twitter</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started/index.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="developer_guide/index.html">
+    Developer Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="authors.html">
+    Development Team
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#" aria-current="page">
+    History
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://molssi-seamm.github.io">
+    Main SEAMM documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://molssi-seamm.github.io">
+    SEAMM Documentation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-external" href="https://molssi.org">
+    MolSSI
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/molssi-seamm/geometry_analysis_step" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/MolSSI_NSF" title="Twitter" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-twitter fa-lg" aria-hidden="true"></i><span class="visually-hidden">Twitter</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button type="button" id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">History</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="history">
+<h1>History<a class="headerlink" href="#history" title="Link to this heading">#</a></h1>
+<dl class="simple">
+<dt>2026.10.17 – Analyze MD run before the step; D in the box and corrected; labelled errors</dt><dd><ul class="simple">
+<li><p>The step analyzes MD run before it in the flowchart – the runs of a Loop around
+the MD, as independent replicas (“the last MD run of each loop iteration”, the
+default) – or md.h5md files; it no longer runs its own MD in a sub-flowchart.
+Older flowcharts that stored its settings for that can still be read; the check
+before the job runs says what replaces them.</p></li>
+<li><p>The check before the job runs also warns when the analysis is inside the loop
+holding its MD, when the loop changes the temperature or pressure, and when the
+thermostat does not suit the analysis, with fixes; the step warns before the MD
+when the system is small.</p></li>
+<li><p>Errors are the 95% confidence interval, Student’s t for the number of runs or
+blocks, and the output says so; stored errors are standard errors.</p></li>
+<li><p>The state of the runs – temperature, pressure, volume and density with their
+errors, and the equilibrium density where an NPT run before them gives the bulk
+modulus – is reported and stored. The values of each run or block are in
+step.out.</p></li>
+<li><p>The box-size (Yeh-Hummer) correction was added without saying so: D in the box
+and D corrected are now both given, with the correction, the viscosity used and
+where it came from; the error of the corrected D includes that of the viscosity.</p></li>
+<li><p>D is the average of the x, y and z components within each run, with a check
+that they agree. Stored errors were 2 × the standard error; they are now the
+standard error.</p></li>
+<li><p>The molecules’ centres of mass are computed from the atoms’ positions when only
+those were sampled.</p></li>
+</ul>
+</dd>
+<dt>2026.10.15.3 – The viscosity for the finite-size correction from a Viscosity step</dt><dd><ul class="simple">
+<li><p>The Yeh-Hummer correction for the size of the cell uses, by default, the
+viscosity from the Viscosity step run before this one, and says which value it
+used, noting if it is for a different temperature. “Viscosity from” chooses it
+or a given value. If there is no Viscosity step, the correction is skipped with
+a note.</p></li>
+<li><p>The correction is now on by default. Flowcharts written before keep the
+viscosity they give, and the correction they asked for.</p></li>
+</ul>
+</dd>
+<dt>2026.10.15.2 – Analyze MD run earlier in the flowchart</dt><dd><ul class="simple">
+<li><p>New “MD to analyze” choice: run the MD in the sub-flowchart (as before), the last
+MD run earlier in the flowchart, the last MD run of each loop iteration, or
+md.h5md files, including other jobs’. One production run can now feed several
+analyses. A single run is divided into blocks to estimate the errors.</p></li>
+<li><p>Before the job runs, the step checks that the MD will sample the positions and
+velocities it needs, and the job does not start if it does not. When it runs its
+own MD, it turns on any missing sampling and says so.</p></li>
+<li><p>The dialog shows only the settings that apply, and hides the sub-flowchart when
+it is not used.</p></li>
+</ul>
+</dd>
+<dt>2026.10.15.1 – Reads the H5MD files; needs a periodic system</dt><dd><ul class="simple">
+<li><p>Reads the positions and velocities from the <code class="docutils literal notranslate"><span class="pre">md.h5md</span></code> files that the LAMMPS step
+now writes, and from the older text files for runs made before.</p></li>
+<li><p>Stops before running any MD if the system is not periodic, since the diffusion
+coefficient of a molecule or cluster is not a bulk property.</p></li>
+<li><p>Bugfix: atomic positions or velocities were used as if they were molecular when
+the centres of mass were not sampled, giving wrong results for molecules of more
+than one atom. The step now stops with a message asking for the centres of mass.</p></li>
+</ul>
+</dd>
+<dt>2026.10.15 – Bugfix: crash with Helfand moments; per-direction coefficients</dt><dd><ul class="simple">
+<li><p>The step stopped with <code class="docutils literal notranslate"><span class="pre">KeyError:</span> <span class="pre">'Dx'</span></code> after the second run whenever it used
+Helfand moments (the “Helfand moments” or “both” approach), while printing the
+current estimates. It now prints them.</p></li>
+<li><p>The diffusion coefficients in x, y and z (Dx, Dy and Dz) were a third of their
+correct values, and had only a third of the Yeh–Hummer correction: they were
+the contributions of each direction to D rather than diffusion coefficients.
+For an isotropic liquid they now equal D. The total D is unchanged by this.</p></li>
+<li><p>With Helfand moments, the total D is now computed from the sum of the moments
+in x, y and z, as with the MSD, rather than from the summed velocities, whose
+cross terms added noise. The value changes within its error.</p></li>
+<li><p>The analysis now uses the shared <code class="docutils literal notranslate"><span class="pre">seamm_md_analysis</span></code> library, also used by the
+Thermal Conductivity step, instead of its own copy. The Helfand moments and mean
+square displacements are computed much faster (by FFT), which matters for long
+runs and many molecules.</p></li>
+<li><p>The MSD graphs now label their y units as Å^2 rather than Å.</p></li>
+</ul>
+</dd>
+<dt>2026.10.12 – Model chemistries</dt><dd><ul class="simple">
+<li><p>The results name the model chemistry (e.g. <code class="docutils literal notranslate"><span class="pre">FF&#64;oplsaa</span></code>) when LAMMPS uses one,
+rather than requiring a Forcefield step.</p></li>
+</ul>
+</dd>
+<dt>2026.3.26 – Bugfix: Corrected handling of viscosity &lt;= 0.0</dt><dd><ul class="simple">
+<li><p>Ignore the hydrostatic correction if the given viscosity is less than or equal
+to 0. This allows a flowchart to work more simply whether the viscosity os know or
+not.</p></li>
+</ul>
+</dd>
+<dt>2026.3.15 – Fixed an error with MLFFs and protected the viscosity correction.</dt><dd><ul class="simple">
+<li><p>Fixed and error with the name of the MLFF, which caused the code to crash after
+printing the results but before ending.</p></li>
+<li><p>Protected the hydrodynamic correction using the viscosity if the viscosity given
+is zero or less, in which case the correction is ignored.</p></li>
+</ul>
+</dd>
+</dl>
+<p>2026.3.1 – Internal: switching from deprecated library pkg_resources to importlib</p>
+<dl class="simple">
+<dt>2026.1.8 – Enhancement to use atomic position and velocity trajectories</dt><dd><ul class="simple">
+<li><p>Add support for the atomic position and velocity trajectories for
+forcefields/potentials such as EAM/MEAM where there are no bonds, and hence the
+center-of-mass trajectories used from molecules are not allowed by LAMMPS.</p></li>
+</ul>
+</dd>
+</dl>
+<p>2025.9.23 – Bugfix: Fixed error storing diffusion constants as properties</p>
+<dl class="simple">
+<dt>2024.7.30.1 – Bugfix: Reinitialization of data in loops</dt><dd><ul class="simple">
+<li><p>Fixed a bug where the data was not being correctly initialized if the step was in
+a loop. This caused the timing results to be incorrect.</p></li>
+<li><p>Added actual number of samples for the MSD and length of the Helfand integral to
+the results.</p></li>
+</ul>
+</dd>
+<dt>2024.7.30 – Added optional correction for cell size</dt><dd><ul class="simple">
+<li><p>Added an option to use the Yeh-Hummer hydrostatic correction for the effects of
+the finite cell size. The viscosity is required as an input, but the correction
+eliminates the need to extrapolate to 1/L = 0.</p></li>
+<li><p>Added control parameters and timings to the available results.</p></li>
+</ul>
+</dd>
+<dt>2024.7.21 – Significant improvements!</dt><dd><ul class="simple">
+<li><p>Simplified error analysis to safe approach of analyzing the diffusion constants
+over runs.</p></li>
+<li><p>Improved fitting of the curves to focus on the central linear portion. There are
+reasonable defaults but the user can adjust as needed.</p></li>
+<li><p>Provided a combined average and error bars when both the MSF approach and Helfand
+moments are used.</p></li>
+<li><p>Capture temperature, pressure, and cell size from the MD step, providing 1/L as a
+result since the true diffusion constants are found by extrapolating to 1/L = 0.</p></li>
+<li><p>Provided control over the number of steps for the expensive numerical integration
+in the Helfand moments, providing a reasonable default of 1000.</p></li>
+</ul>
+</dd>
+<dt>2024.7.15 – Bugfix: Significant error in Helfand Moment approach</dt><dd><ul class="simple">
+<li><p>Now fixed and seems to be working.</p></li>
+</ul>
+</dd>
+<dt>2024.7.4 – Improved fitting of curves</dt><dd><ul class="simple">
+<li><p>Removed weighting of the fit by the stdev since it is too biased to the beginning</p></li>
+<li><p>Added control over the portion of the data to fit in order to avoid the initial
+curvature and poor data towards the end.</p></li>
+</ul>
+</dd>
+<dt>2024.6.3 – Bugfix: handling of options for subflowchart</dt><dd><ul class="simple">
+<li><p>Fixed a bug where the options for the subflowchart were not being parsed
+correctly.</p></li>
+</ul>
+</dd>
+<dt>2024.5.26 – Updated for new task handling</dt><dd><ul class="simple">
+<li><p>The new handling of running tasks such as LAMMPS required a small change in the
+code.</p></li>
+</ul>
+</dd>
+<dt>2023.9.5 – Changed default to using only MSD</dt><dd><ul class="simple">
+<li><p>The Helfand moments approach seems give incorrect results if the sampling time is
+too long. It is not dramatic, but gives increasingly incorrect results as the
+sampling time is increased. Thus using the Helfand moments is dangerous because
+the results may be wrong, but not obviously so.</p></li>
+</ul>
+</dd>
+<dt>2023.8.30 – Initial working version</dt><dd><ul class="simple">
+<li><p>A working version that has been tested somewhat. Further testing and documentation
+will follow</p></li>
+</ul>
+</dd>
+<dt>2023.5.8 – Initial development version created</dt><dd><ul class="simple">
+<li><p>Plug-in created using the SEAMM plug-in cookiecutter.</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="authors.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Development Team</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="_sources/history.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.23.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
