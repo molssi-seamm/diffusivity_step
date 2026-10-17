@@ -53,10 +53,9 @@ class DiffusivityStep(object):
             A non-graphical SEAMM node
 
         **kwargs : keyword arguments
-            Various keyword arguments such as title, namespace or
-            extension representing the title displayed in the flowchart,
-            the namespace for the plugins of a subflowchart and
-            the extension, respectively.
+            Various keyword arguments such as title or extension,
+            representing the title displayed in the flowchart and the
+            extension, respectively.
 
         Returns
         -------

@@ -14,9 +14,10 @@ class DiffusivityParameters(seamm.Parameters):
     """
     The control parameters for Diffusivity.
 
-    You need to replace the "time" entry in dictionary below these comments with the
-    definitions of parameters to control this step. The keys are parameters for the
-    current plugin,the values are dictionaries as outlined below.
+    The MD to analyze is run earlier in the flowchart -- in a Loop for independent
+    runs -- or in other jobs (see seamm_md_analysis.step_support.source_parameters).
+    The keys are parameters for the current plugin, the values are dictionaries as
+    outlined below.
 
     Examples
     --------
@@ -73,6 +74,9 @@ class DiffusivityParameters(seamm.Parameters):
     Diffusivity, TkDiffusivity, Diffusivity DiffusivityParameters, DiffusivityStep
     """
 
+    # Dropped with the own-MD route (phase 8): ignored in older flowcharts
+    retired = ("nruns", "errors")
+
     parameters = {
         **source_parameters("the diffusivity"),
         "approach": {
@@ -87,16 +91,6 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "Approach:",
             "help_text": "The approach or method for determining the diffusivity.",
-        },
-        "nruns": {
-            "default": "5",
-            "kind": "integer",
-            "default_units": "",
-            "enumeration": tuple(),
-            "format_string": "",
-            "description": "Number of runs to average:",
-            "help_text": "The number for separate runs to average.",
-            "applies_when": {"md source": run_own_md},
         },
         "hydrodynamic correction": {
             "default": "yes",
@@ -141,6 +135,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "Start point of MSD fit (0.0..1.0):",
             "help_text": "Starting point of fit the MSD this far into the data.",
+            "applies_when": {"approach": ("both", "Mean Square Displacement (MSD)")},
         },
         "msd_fit_end": {
             "default": "0.6",
@@ -150,6 +145,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "End point of MSD fit (0.0..1.0):",
             "help_text": "End point of fit the MSD this far into the data.",
+            "applies_when": {"approach": ("both", "Mean Square Displacement (MSD)")},
         },
         "helfand_fit_start": {
             "default": "0.35",
@@ -159,6 +155,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "Start point of Helfand fit (0.0..1.0):",
             "help_text": "Starting point of Helfand fit this far into the data.",
+            "applies_when": {"approach": ("both", "Helfand moments")},
         },
         "helfand_fit_end": {
             "default": "1.00",
@@ -168,6 +165,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "End point of Helfand fit (0.0..1.0):",
             "help_text": "End point of Helfand fit this far into the data.",
+            "applies_when": {"approach": ("both", "Helfand moments")},
         },
         "maximum Helfand Integral length": {
             "default": 1000,
@@ -177,20 +175,7 @@ class DiffusivityParameters(seamm.Parameters):
             "format_string": "",
             "description": "Maximum Helfand Integral length:",
             "help_text": "Maximum length of the Integral used in the Helfand moments.",
-        },
-        "errors": {
-            "default": "continue to next run",
-            "kind": "string",
-            "default_units": "",
-            "enumeration": (
-                "continue to next run",
-                "exit the thermal conductivity step",
-                "stop the job",
-            ),
-            "format_string": "s",
-            "description": "On errors",
-            "help_text": "How to handle errors in the runs",
-            "applies_when": {"md source": run_own_md},
+            "applies_when": {"approach": ("both", "Helfand moments")},
         },
         "results": {
             "default": {},
@@ -227,6 +212,13 @@ class DiffusivityParameters(seamm.Parameters):
         # Viscosity step, it was always given, so keep that for older flowcharts.
         if data is not None and "viscosity" in data and "viscosity source" not in data:
             data["viscosity source"] = {"value": "given value", "units": None}
+
+        # The step no longer runs its own MD; "nruns" and "errors" are retired. A
+        # flowchart written before "md source" existed ran the MD in the step, so
+        # it keeps saying so, and the check of the flowchart explains what replaces
+        # it.
+        if data is not None and "nruns" in data and "md source" not in data:
+            data["md source"] = {"value": run_own_md, "units": None}
 
         super().__init__(
             defaults={**DiffusivityParameters.parameters, **defaults}, data=data

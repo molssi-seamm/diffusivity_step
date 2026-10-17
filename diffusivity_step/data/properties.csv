@@ -23,3 +23,5 @@ Dy#{model},json,m^2/s,"The diffusion coefficient in y using {model}",https://en.
 "Dy,stderr#{model}",json,m^2/s,"The standard error of the diffusion coefficient in y using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
 Dz#{model},json,m^2/s,"The diffusion coefficient in z using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
 "Dz,stderr#{model}",json,m^2/s,"The standard error of the diffusion coefficient in z using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+D (box)#{model},json,m^2/s,"The total diffusion coefficient in the periodic cell, without the correction for its size, using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity
+"D (box),stderr#{model}",json,m^2/s,"The standard error of the total diffusion coefficient in the periodic cell using {model}",https://en.wikipedia.org/wiki/Mass_diffusivity

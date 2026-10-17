@@ -3,12 +3,9 @@
 """The graphical part of a Diffusivity step"""
 
 import tkinter as tk
-import tkinter.ttk as ttk
 
 from .diffusivity_parameters import DiffusivityParameters
-from seamm_md_analysis.step_support import read_files, run_own_md
 import seamm
-from seamm_util import ureg, Q_, units_class  # noqa: F401
 import seamm_widgets as sw
 
 
@@ -24,8 +21,6 @@ class TkDiffusivity(seamm.TkNode):
         The corresponding node of the non-graphical flowchart
     namespace : str
         The namespace of the current step.
-    tk_subflowchart : TkFlowchart
-        A graphical Flowchart representing a subflowchart
     canvas: tkCanvas = None
         The Tk Canvas to draw on
     dialog : Dialog
@@ -100,187 +95,48 @@ class TkDiffusivity(seamm.TkNode):
         self.create_dialog()
 
     def create_dialog(self):
-        """
-        Create the dialog. A set of widgets will be chosen by default
-        based on what is specified in the  diffusivity parameters
-        module.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
+        """Create the dialog, with the widgets for the parameters.
 
         See Also
         --------
         TkDiffusivity.reset_dialog
         """
+        frame = super().create_dialog(title="Diffusivity")
 
-        frame = super().create_dialog(title="Diffusivity", widget="notebook")
-        # make it large!
-        screen_w = self.dialog.winfo_screenwidth()
-        screen_h = self.dialog.winfo_screenheight()
-        w = int(0.9 * screen_w)
-        h = int(0.8 * screen_h)
-        x = int(0.05 * screen_w / 2)
-        y = int(0.1 * screen_h / 2)
-
-        self.dialog.geometry(f"{w}x{h}+{x}+{y}")
-
-        # Add a frame for the flowchart
-        notebook = self["notebook"]
-        flowchart_frame = ttk.Frame(notebook)
-        self["flowchart frame"] = flowchart_frame
-        notebook.add(flowchart_frame, text="Flowchart", sticky=tk.NSEW)
-
-        self.tk_subflowchart = seamm.TkFlowchart(
-            master=flowchart_frame,
-            flowchart=self.node.subflowchart,
-            namespace=self.namespace,
-        )
-        self.tk_subflowchart.draw()
-
-        # Fill in the control parameters
-        # Shortcut for parameters
         P = self.node.parameters
-
-        # diffusivity frame to isolate widgets
-        frame = self["diffusivity frame"] = ttk.LabelFrame(
-            self["frame"],
-            borderwidth=4,
-            relief="sunken",
-            text="Diffusivity",
-            labelanchor="n",
-            padding=10,
-        )
-
         for key in DiffusivityParameters.parameters:
-            if key not in ("results",):
-                self[key] = P[key].widget(frame)
+            if key == "results":
+                continue
+            self[key] = P[key].widget(frame)
+            if hasattr(self[key], "combobox"):
+                self[key].combobox.bind("<<ComboboxSelected>>", self.reset_dialog)
 
-        # and binding to change as needed
-        for key in (
-            "md source",
-            "approach",
-            "hydrodynamic correction",
-            "viscosity source",
-        ):
-            self[key].combobox.bind(
-                "<<ComboboxSelected>>", self.reset_diffusivity_frame
-            )
-
-        # and lay them out
         self.reset_dialog()
-
         self.setup_results()
 
     def reset_dialog(self, widget=None):
-        """Layout the widgets in the dialog.
-
-        The widgets are chosen by default from the information in
-        Diffusivity parameters.
-
-        This function simply lays them out row by row with
-        aligned labels. You may wish a more complicated layout that
-        is controlled by values of some of the control parameters.
-        If so, edit or override this method
+        """Lay out the widgets that apply, given the choices made.
 
         Parameters
         ----------
         widget : Tk Widget = None
-
-        Returns
-        -------
-        None
-
-        See Also
-        --------
-        TkDiffusivity.create_dialog
         """
-
-        # Remove any widgets previously packed
         frame = self["frame"]
         for slave in frame.grid_slaves():
             slave.grid_forget()
 
+        P = self.node.parameters
+        keys = [key for key in DiffusivityParameters.parameters if key != "results"]
+        values = {key: self[key].get() for key in keys}
         row = 0
-
-        self["diffusivity frame"].grid(row=row, column=0, sticky=tk.EW, pady=10)
-        row += 1
-        self.reset_diffusivity_frame()
-
-        return row
-
-    def reset_diffusivity_frame(self, widget=None):
-        """Layout the widgets in the diffusivity frame
-        as needed for the current state"""
-
-        source = self["md source"].get()
-        approach = self["approach"].get()
-        correction = self["hydrodynamic correction"].get()
-        own_md = source == run_own_md
-
-        # The sub-flowchart is used only when this step runs its own MD
-        notebook = self["notebook"]
-        if own_md:
-            notebook.add(self["flowchart frame"])
-        else:
-            notebook.hide(self["flowchart frame"])
-
-        frame = self["diffusivity frame"]
-        for slave in frame.grid_slaves():
-            slave.grid_forget()
-
-        row = 0
-
-        # Main controls
         widgets = []
-        widgets2 = []
-        keys = ["md source"]
-        if own_md:
-            keys.append("nruns")
-        elif source == read_files:
-            keys.append("md files")
-        if not own_md:
-            keys.append("number of blocks")
-        keys += ["approach", "hydrodynamic correction"]
         for key in keys:
-            self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
-            widgets.append(self[key])
-            row += 1
-        if correction != "no":
-            keys = ["viscosity source"]
-            if self["viscosity source"].get() == "given value":
-                keys.append("viscosity")
-            for key in keys:
-                self[key].grid(row=row, column=1, sticky=tk.W)
-                widgets2.append(self[key])
-                row += 1
-        if own_md:
-            for key in ("errors",):
-                self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
+            if P.applies(key, values):
+                self[key].grid(row=row, column=0, sticky=tk.W)
                 widgets.append(self[key])
                 row += 1
-        if approach == "both" or "MSD" in approach:
-            for key in ("msd_fit_start", "msd_fit_end"):
-                self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
-                widgets.append(self[key])
-                row += 1
-        if approach == "both" or "Helfand" in approach:
-            for key in (
-                "maximum Helfand Integral length",
-                "helfand_fit_start",
-                "helfand_fit_end",
-            ):
-                self[key].grid(row=row, column=0, columnspan=2, sticky=tk.W)
-                widgets.append(self[key])
-                row += 1
-
-        w1 = sw.align_labels(widgets, sticky=tk.E)
-        w2 = sw.align_labels(widgets2, sticky=tk.E)
-        frame.columnconfigure(0, minsize=w1 - w2 + 30)
+        sw.align_labels(widgets, sticky=tk.E)
+        return row
 
     def right_click(self, event):
         """
