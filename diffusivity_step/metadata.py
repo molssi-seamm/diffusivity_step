@@ -2,6 +2,8 @@
 
 """This file contains metadata describing the results from Diffusivity"""
 
+from seamm_md_analysis.step_support import state_results
+
 metadata = {}
 
 """Description of the computational models for Diffusivity.
@@ -138,7 +140,7 @@ metadata["results"] = {
         "type": "string",
     },
     "nruns": {
-        "description": "Number of runs to average",
+        "description": "The number of MD runs analyzed",
         "dimensionality": "scalar",
         "type": "integer",
     },
@@ -173,48 +175,7 @@ metadata["results"] = {
         "type": "integer",
     },
     # Computed results
-    "T": {
-        "description": "The temperature of the diffusion calculation",
-        "dimensionality": "scalar",
-        "type": "float",
-        "units": "K",
-    },
-    "T,stderr": {
-        "description": (
-            "The standard error of the temperature of the diffusion calculation"
-        ),
-        "dimensionality": "scalar",
-        "type": "float",
-        "units": "K",
-    },
-    "P": {
-        "description": "The pressure of the diffusion calculation",
-        "dimensionality": "scalar",
-        "type": "float",
-        "units": "atm",
-    },
-    "P,stderr": {
-        "description": (
-            "The standard error of the pressure of the diffusion calculation"
-        ),
-        "dimensionality": "scalar",
-        "type": "float",
-        "units": "atm",
-    },
-    "density": {
-        "description": "The density of the diffusion calculation",
-        "dimensionality": "scalar",
-        "type": "float",
-        "units": "g/mL",
-    },
-    "density,stderr": {
-        "description": (
-            "The standard error of the density of the diffusion calculation"
-        ),
-        "dimensionality": "scalar",
-        "type": "float",
-        "units": "g/mL",
-    },
+    **state_results,
     "1/L": {
         "description": "1/length of cell in the diffusion calculation",
         "dimensionality": "scalar",
@@ -350,7 +311,10 @@ metadata["results"] = {
         "units": "m^2/s",
     },
     "D {key}": {
-        "description": "The total diffusion coefficient",
+        "description": (
+            "The total diffusion coefficient, corrected for the size of the cell if "
+            "the correction is applied"
+        ),
         "dimensionality": "{species: value}",
         "property": "D#{model}",
         "type": "json",
@@ -404,6 +368,50 @@ metadata["results"] = {
         "dimensionality": "{species: value}",
         "type": "json",
         "units": "m^2/s",
+    },
+    "D (box) {key}": {
+        "description": (
+            "The total diffusion coefficient in the periodic cell, without the "
+            "correction for its size"
+        ),
+        "dimensionality": "{species: value}",
+        "property": "D (box)#{model}",
+        "type": "json",
+        "units": "m^2/s",
+    },
+    "D (box) {key},stderr": {
+        "description": (
+            "The standard error of the total diffusion coefficient in the periodic "
+            "cell"
+        ),
+        "dimensionality": "{species: value}",
+        "property": "D (box),stderr#{model}",
+        "type": "json",
+        "units": "m^2/s",
+    },
+    "Yeh-Hummer correction": {
+        "description": (
+            "The Yeh-Hummer correction for the size of the cell, added to the "
+            "diffusion coefficients"
+        ),
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "Yeh-Hummer correction,stderr": {
+        "description": (
+            "The standard error of the Yeh-Hummer correction, from that of the "
+            "viscosity"
+        ),
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "m^2/s",
+    },
+    "viscosity for correction": {
+        "description": "The viscosity used in the Yeh-Hummer correction",
+        "dimensionality": "scalar",
+        "type": "float",
+        "units": "mPa*s",
     },
     # Timings
     "t_msd": {

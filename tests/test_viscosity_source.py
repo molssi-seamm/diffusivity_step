@@ -56,25 +56,31 @@ def test_viscosity_from_the_viscosity_step():
         "step": "Viscosity",
         "id": "4",
     }
-    eta, T, text = Node({"_viscosity": record})._viscosity_for_correction(P)
-    assert eta == pytest.approx(8.5e-4)
-    assert T == pytest.approx(300.0)
-    assert "0.85 ± 0.03 mPa*s, from step 4 (Viscosity, Green-Kubo, at 300.0 K)" in text
+    eta, text = Node({"_viscosity": record})._viscosity_for_correction(P)
+    assert eta["value"] == pytest.approx(8.5e-4)
+    assert eta["stderr"] == pytest.approx(3e-5)
+    assert eta["T"] == pytest.approx(300.0)
+    assert eta["origin"] == "from step 4 (Viscosity, Green-Kubo, at 300.0 K)"
+    assert (
+        "0.85 ± 0.03 (standard error) mPa*s, from step 4 (Viscosity, Green-Kubo, "
+        "at 300.0 K)" in text
+    )
 
 
 def test_no_viscosity_step_skips_the_correction():
-    eta, T, text = Node({})._viscosity_for_correction(P)
+    eta, text = Node({})._viscosity_for_correction(P)
     assert eta is None
     assert "skipped" in text
 
 
 def test_given_viscosity():
-    eta, _, text = Node({})._viscosity_for_correction(
+    eta, text = Node({})._viscosity_for_correction(
         {**P, "viscosity source": "given value"}
     )
-    assert eta == pytest.approx(5e-4)
+    assert eta["value"] == pytest.approx(5e-4)
+    assert eta["stderr"] is None
     assert "given viscosity" in text
-    eta, _, text = Node({})._viscosity_for_correction(
+    eta, text = Node({})._viscosity_for_correction(
         {**P, "viscosity source": "given value", "viscosity": Q_(0.0, "cP")}
     )
     assert eta is None
@@ -83,4 +89,49 @@ def test_given_viscosity():
 def test_no_correction():
     assert Node({})._viscosity_for_correction(
         {**P, "hydrodynamic correction": False}
-    ) == (None, None, None)
+    ) == (None, None)
+
+
+def test_correction_text_labels_every_error():
+    correction = {
+        "value": 0.6e-9,
+        "stderr": 0.05e-9,
+        "eta": 8.5e-4,
+        "eta stderr": 3e-5,
+        "origin": "from step 4 (Viscosity, Green-Kubo, at 300.0 K)",
+        "T": 298.2,
+        "L": 24.97,
+        "varies": False,
+    }
+    text = Diffusivity._correction_text(correction, 1.0e-9, "10⁻⁹ m²/s")
+    assert "ΔD = ξ kB T / (6π η L) = (0.6 ± 0.05 standard error) × 10⁻⁹ m²/s" in text
+    assert "η = 0.85 ± 0.03 (standard error) mPa·s, from step 4" in text
+    assert "L = 24.970 Å" in text
+    assert "includes the error of η" in text
+
+
+def test_old_flowcharts_still_read():
+    """The settings for running the MD in the step are dropped; a step that ran its
+    own MD says so, for the check of the flowchart."""
+    import seamm
+
+    if not hasattr(seamm.Parameters, "retired"):
+        pytest.skip("needs seamm with Parameters.retired")
+    assert diffusivity_step.DiffusivityParameters.retired == ("nruns", "errors")
+    data = {
+        "approach": {"value": "both", "units": None},
+        "nruns": {"value": "$nruns", "units": None},
+        "errors": {"value": "continue to next run", "units": None},
+    }
+    P = diffusivity_step.DiffusivityParameters(data=data)
+    assert "nruns" not in P and "errors" not in P
+    assert P["md source"].value == "run the MD in the sub-flowchart"
+    data = {
+        "md source": {
+            "value": "the last MD run of each loop iteration",
+            "units": None,
+        },
+        "nruns": {"value": "5", "units": None},
+    }
+    P = diffusivity_step.DiffusivityParameters(data=data)
+    assert P["md source"].value == "the last MD run of each loop iteration"

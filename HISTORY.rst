@@ -1,6 +1,31 @@
 =======
 History
 =======
+2026.10.17 -- Analyze MD run before the step; D in the box and corrected; labelled errors
+    * The step analyzes MD run before it in the flowchart -- the runs of a Loop around
+      the MD, as independent replicas ("the last MD run of each loop iteration", the
+      default) -- or md.h5md files; it no longer runs its own MD in a sub-flowchart.
+      Older flowcharts that stored its settings for that can still be read; the check
+      before the job runs says what replaces them.
+    * The check before the job runs also warns when the analysis is inside the loop
+      holding its MD, when the loop changes the temperature or pressure, and when the
+      thermostat does not suit the analysis, with fixes; the step warns before the MD
+      when the system is small.
+    * Errors are the 95% confidence interval, Student's t for the number of runs or
+      blocks, and the output says so; stored errors are standard errors.
+    * The state of the runs -- temperature, pressure, volume and density with their
+      errors, and the equilibrium density where an NPT run before them gives the bulk
+      modulus -- is reported and stored. The values of each run or block are in
+      step.out.
+    * The box-size (Yeh-Hummer) correction was added without saying so: D in the box
+      and D corrected are now both given, with the correction, the viscosity used and
+      where it came from; the error of the corrected D includes that of the viscosity.
+    * D is the average of the x, y and z components within each run, with a check
+      that they agree. Stored errors were 2 × the standard error; they are now the
+      standard error.
+    * The molecules' centres of mass are computed from the atoms' positions when only
+      those were sampled.
+
 2026.10.15.3 -- The viscosity for the finite-size correction from a Viscosity step
     * The Yeh-Hummer correction for the size of the cell uses, by default, the
       viscosity from the Viscosity step run before this one, and says which value it

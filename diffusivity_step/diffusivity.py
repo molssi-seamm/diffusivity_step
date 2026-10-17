@@ -1,25 +1,34 @@
 # -*- coding: utf-8 -*-
 
-"""Non-graphical part of the Diffusivity step in a SEAMM flowchart"""
+"""Non-graphical part of the Diffusivity step in a SEAMM flowchart
 
-import importlib
+The self-diffusion coefficients of the species in a fluid, from the mean square
+displacement (MSD) of the molecules' centres of mass, from their single-molecule
+Helfand moments (the square of the integral of the velocity), or from both, with the
+Yeh-Hummer correction for the size of the periodic cell.
+
+The MD is run before this step -- in a Loop for independent runs -- or read from
+files; the step analyzes it.
+"""
+
+import importlib.resources
 import logging
-from math import log10, ceil, floor, sqrt
+from math import floor, log10, sqrt
 from pathlib import Path
-import sys
 import time
-import traceback
 
 import numpy as np
-import tabulate
+from tabulate import tabulate
 
 from seamm_md_analysis import (
+    Estimate,
+    component_check,
     fit_slope,
-    fmt_err,
+    is_cubic,
+    isotropy,
     msd_by_species,
     open_md,
-    read_dump_trajectory,
-    read_vector_trajectory,
+    run_state,
     species_helfand_moments,
     yeh_hummer_correction,
 )
@@ -29,15 +38,19 @@ from seamm_md_analysis.step_support import (
     check_md_flowchart,
     md_inputs,
     preceding_viscosity,
-    request_sampling,
-    run_own_md,
+    print_details,
+    read_files,
+    report_state,
+    size_warnings,
+    state_data,
 )
+from seamm_md_analysis.transport import YEH_HUMMER_XI
 
 import diffusivity_step
 import molsystem
 import seamm
 import seamm_util
-from seamm_util import ureg, Q_  # noqa: F401
+from seamm_util import Q_
 import seamm_util.printing as printing
 from seamm_util.printing import FormattedText as __
 
@@ -59,6 +72,26 @@ csv_file = path / "properties.csv"
 if path.exists():
     molsystem.add_properties_from_file(csv_file)
 
+#: Å²/ps in m²/s
+A2_PER_PS = Q_(1.0, "Å^2/ps").m_as("m^2/s")
+#: The name of each method in the output
+METHODS = {"MSD": "MSD", "HM": "Helfand moments", "both": "Combined"}
+#: The suffix of each method's results; the best estimate has none
+SUFFIX = {"MSD": " (MSD)", "HM": " (HM)", "both": ""}
+#: The directions
+DIRECTIONS = ("x", "y", "z")
+#: The fewest frames of a block of a single run
+MIN_FRAMES = 10
+#: The number of frames read at a time when computing centres of mass
+CHUNK = 100
+
+_SUPERSCRIPTS = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def power_of_ten(exponent):
+    """10 to an integer power, as text, e.g. "10⁻⁹"."""
+    return "10" + str(exponent).translate(_SUPERSCRIPTS)
+
 
 class Diffusivity(seamm.Node):
     """
@@ -66,62 +99,37 @@ class Diffusivity(seamm.Node):
 
     Attributes
     ----------
-    parser : configargparse.ArgParser
-        The parser object.
-
-    options : tuple
-        It contains a two item tuple containing the populated namespace and the
-        list of remaining argument strings.
-
-    subflowchart : seamm.Flowchart
-        A SEAMM Flowchart object that represents a subflowchart, if needed.
-
     parameters : DiffusivityParameters
         The control parameters for Diffusivity.
+    paths : [pathlib.Path]
+        The md.h5md file of each run analyzed.
 
     See Also
     --------
-    TkDiffusivity,
-    Diffusivity, DiffusivityParameters
+    TkDiffusivity, DiffusivityParameters
     """
 
     def __init__(
         self,
         flowchart=None,
         title="Diffusivity",
-        namespace="org.molssi.seamm",
         extension=None,
         logger=logger,
     ):
         """A step for Diffusivity in a SEAMM flowchart.
 
-        You may wish to change the title above, which is the string displayed
-        in the box representing the step in the flowchart.
-
         Parameters
         ----------
         flowchart: seamm.Flowchart
             The non-graphical flowchart that contains this step.
-
         title: str
             The name displayed in the flowchart.
-        namespace : str
-            The namespace for the plug-ins of the subflowchart
         extension: None
             Not yet implemented
         logger : Logger = logger
             The logger to use and pass to parent classes
-
-        Returns
-        -------
-        None
         """
         logger.debug(f"Creating Diffusivity {self}")
-
-        self.subflowchart = seamm.Flowchart(
-            parent=self, name="Diffusivity", namespace=namespace
-        )
-
         super().__init__(
             flowchart=flowchart,
             title="Diffusivity",
@@ -132,51 +140,7 @@ class Diffusivity(seamm.Node):
 
         self._metadata = diffusivity_step.metadata
         self.parameters = diffusivity_step.DiffusivityParameters()
-        self._file_handler = None
-
-        # Set our citation level to 1!
-        self.citation_level = 1
-
-        self._tensor_labels = [
-            ("x", "red", "rgba(255,0,0,0.1)"),
-            ("y", "green", "rgba(0,255,0,0.1)"),
-            ("z", "blue", "rgba(0,0,255,0.1)"),
-            (" ", "black", "rgba(0,0,0,0.1)"),
-        ]
-
-        self._configuration = None  # The initial configuration
-        self._n_molecules = None
-        self._species = None  # The molecule indices for each species
-
-        self._state_vars = {}  # The state of the system in the MD
-        self._results = {}  # The results data.
-
-        self._use_msd = False
-        self._msd_dt = None
-        self._msds = None
-        self._msd_errs = None
-        self._msd = None
-        self._msd_err = None
-        self._scale = None  # Factor to make the results nice numbers
-        self._msd_data = {}
-
-        self._use_velocity = False
-        self._velocity_dt = None
-        self._Ms = None
-        self._M_errs = None
-        self._M = None
-        self._M_err = None
-        self._M_coeff = []
-        self._M_stderr = []
-        self._M_data = {}
-
-        self._state = {}
-
-        # Internal statistics
-        self._msd_samples = None
-        self._msd_times = []
-        self._helfand_integral_length = None
-        self._helfand_integral_times = []
+        self._reset()
 
     @property
     def version(self):
@@ -188,983 +152,38 @@ class Diffusivity(seamm.Node):
         """The git version of this module."""
         return diffusivity_step.__git_revision__
 
-    @property
-    def configuration(self):
-        """The initial configuration for this run."""
-        if self._configuration is None:
-            _, self._configuration = self.get_system_configuration
-        return self._configuration
-
-    @property
-    def n_molecules(self):
-        """The number of molecules in the system."""
-        return self._n_molecules
-
-    @property
-    def results(self):
-        """The results data."""
-        return self._results
-
-    @property
-    def species(self):
-        """The species and list of molecules for each."""
-        if self._species is None:
-            self._species = self.parse_molecules()
-        return self._species
-
-    def analyze_run(
-        self,
-        indent="",
-        P=None,
-        run=None,
-        weighted=False,
-        **kwargs,
-    ):
-        """Do any analysis of the output from this step.
-
-        Also print important results to the local step.out file using
-        "printer".
-
-        Parameters
-        ----------
-        indent: str
-            An extra indentation for the output
-        weighted : bool
-            Whether to use the stderr to weight the fit, default False
-        """
-        # Print useful information about the analysis cost before the first run results
-        if run == 1:
-            if self._msd_samples is not None:
-                self.results["msd samples"] = self._msd_samples
-                text = (
-                    f"The MSD analysis over {self._msd_samples} steps took "
-                    f"{self._msd_times[0]:.3f} seconds."
-                )
-                printer.normal(__(text, indent=8 * " "))
-            if self._helfand_integral_length is not None:
-                self.results["Helfand integral length"] = self._helfand_integral_length
-                text = (
-                    f"The Helfand moment analysis over {self._helfand_integral_length} "
-                    f"steps took {self._helfand_integral_times[0]:.3f} seconds."
-                )
-                printer.normal(__(text, indent=8 * " "))
-            printer.normal("")
-
-        # If requested, calculate the Yeh-Hummer correction for cell size
-        correction = None
-        if self._eta is not None:
-            if "T" in self._state_vars:
-                T = self._state["T"][-1]
-                if "a" in self._state_vars:
-                    L = self._state["a"][-1]
-                else:
-                    L = self._configuration.cell.a
-                L = Q_(L, "Å")
-
-                correction = yeh_hummer_correction(T, L.m_as("m"), self._eta)
-            else:
-                if run == 1:
-                    text = (
-                        "\nThe temperature is not available, so cannot calculate the "
-                        "Yeh-Hummer correction. You need to save it to the variable "
-                        "'T' in the molecular dynamics."
-                    )
-                printer.normal(__(text, indent=8 * " "))
-
-        table = {
-            "Run": [],
-            "      Method       ": [],
-            "Species": [],
-            "  Dx  ": [],
-            "  ex  ": [],
-            "  Dy  ": [],
-            "  ey  ": [],
-            "  Dz  ": [],
-            "  ez  ": [],
-            "  D   ": [],
-            "  e   ": [],
-        }
-        if correction is not None:
-            table["Correction"] = []
-
-        # Add state variables at end
-        for var in self._state_vars:
-            var = var.replace(",stderr", " ±")
-            table[var] = []
-
-        # On to the results
-        if self._use_msd:
-            # Fit the MSD to a line
-            nframes, nalpha = self._msd[0].shape
-            ts = np.arange(nframes) * self._msd_dt.m_as("ps")  # Scale to ps
-            ts = ts.tolist()
-
-            # Set up storage for each run the first time
-            msd_data = self._msd_data
-            if run == 1:
-                # Space for the results from each run. Arrays indexed by smiles & alpha
-                per_run = msd_data["per_run"] = {}
-                for smiles in self.species.keys():
-                    per_run[smiles] = {}
-                    for i in range(nalpha):
-                        per_run[smiles][i] = []
-
-                # Space for the mean and stderr so far
-                mean = msd_data["mean"] = {}
-                stderr = msd_data["stderr"] = {}
-                for smiles in self.species.keys():
-                    mean[smiles] = {}
-                    stderr[smiles] = {}
-                    for i in range(nalpha):
-                        mean[smiles][i] = []
-                        stderr[smiles][i] = []
-                    mean["D"] = []
-                    stderr["D"] = []
-
-            # Create the plot for the MSD
-            figure = self.create_figure(
-                module_path=("seamm",),
-                template="line.graph_template",
-                title="Mean Square Displacement",
-            )
-            plot = figure.add_plot("MSD")
-
-            x_axis = plot.add_axis("x", label="Time (ps)")
-            y_axis = plot.add_axis("y", label="MSD (Å^2)", anchor=x_axis)
-            x_axis.anchor = y_axis
-
-            for spec, smiles in enumerate(self.species.keys()):
-                coeffs = msd_data["per_run"][smiles]
-                # Fit the slopes
-                fit = []
-                # Convert units and remember the factor of 1/2 in the Einstein
-                # equation for each direction, and 1/6 for the total
-                for i in range(nalpha):
-                    factor = Q_("Å^2/ps").m_as("m^2/s") / (2 if i < 3 else 6)
-                    if weighted:
-                        slope, err, xs, ys = fit_slope(
-                            self._msd[spec][:, i],
-                            ts,
-                            sigma=self._msd_err[spec][:, i],
-                            start=P["msd_fit_start"],
-                            end=P["msd_fit_end"],
-                        )
-                    else:
-                        slope, err, xs, ys = fit_slope(
-                            self._msd[spec][:, i],
-                            ts,
-                            start=P["msd_fit_start"],
-                            end=P["msd_fit_end"],
-                        )
-                    d_coeff = slope * factor
-                    err = err * factor
-
-                    # Set a scale factor to make the numbers managable
-                    if self._scale is None:
-                        self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
-
-                    if correction is not None:
-                        d_coeff += correction
-
-                    msd_data["per_run"][smiles][i].append(d_coeff)
-
-                    if run == 1:
-                        v = round(d_coeff / self._scale, 3)
-                        msd_data["mean"][smiles][i].append(v)
-                        msd_data["stderr"][smiles][i].append(None)
-                    else:
-                        coeffs = msd_data["per_run"][smiles][i]
-                        tmp = np.array(coeffs)
-                        mean = float(tmp.mean())
-                        std = float(tmp.std())
-                        stderr = std / sqrt(run - 1)
-                        v_mean, e_mean = fmt_err(
-                            mean / self._scale, 2 * stderr / self._scale, as_float=True
-                        )
-                        v, e = fmt_err(
-                            d_coeff / self._scale,
-                            2 * stderr / self._scale,
-                            as_float=True,
-                        )
-                        msd_data["mean"][smiles][i].append(v_mean)
-                        msd_data["stderr"][smiles][i].append(e_mean)
-
-                    fit.append(
-                        {
-                            "Species": smiles,
-                            "D": d_coeff,
-                            "Dmean": mean,
-                            "stderr": stderr,
-                            "xs": xs,
-                            "ys": ys,
-                            "scale": self._scale,
-                            "D_s": v,
-                        }
-                    )
-
-                    if i == 0:
-                        if spec == 0:
-                            table["Run"].append(run)
-                            if correction is not None:
-                                table["Correction"].append(
-                                    f"{correction / self._scale:.3f}"
-                                )
-                            for var in self._state_vars:
-                                value = self._state[var][-1]
-                                if value != "":
-                                    if "density" in var:
-                                        value = round(value, 3)
-                                    else:
-                                        value = round(value, 1)
-                                var = var.replace(",stderr", " ±")
-                                table[var].append(value)
-                            table["      Method       "].append("MSD".center(20))
-                        else:
-                            table["Run"].append("")
-                            if correction is not None:
-                                table["Correction"].append("")
-                            table["      Method       "].append("")
-                        table["Species"].append(smiles)
-                    alpha = self._tensor_labels[i][0]
-                    table["  D" + alpha + "  "].append(v)
-                    table["  e" + alpha + "  "].append("")
-
-                add_msd_trace(
-                    plot,
-                    x_axis,
-                    y_axis,
-                    smiles,
-                    self._msd[spec],
-                    ts,
-                    fit=fit,
-                )
-
-            figure.grid_plots("MSD")
-
-            # Write to disk
-            filename = "MSD.graph"
-            path = Path(self.directory) / filename
-            figure.dump(path)
-
-            if "html" in self.options and self.options["html"]:
-                path = path.with_suffix(".html")
-                figure.template = "line.html_template"
-                figure.dump(path)
-
-        if self._use_velocity:
-            # Fit the Helfand moments
-            nframes, nalpha = self._M[0].shape
-            ts = np.arange(nframes) * self._velocity_dt.m_as("ps")  # Scale to ps
-            ts = ts.tolist()
-
-            # Set up storage for each run the first time
-            M_data = self._M_data
-            if run == 1:
-                # Space for the results from each run. Arrays indexed by smiles & alpha
-                per_run = M_data["per_run"] = {}
-                for smiles in self.species.keys():
-                    per_run[smiles] = {}
-                    for i in range(nalpha):
-                        per_run[smiles][i] = []
-
-                # Space for the mean and stderr so far
-                mean = M_data["mean"] = {}
-                stderr = M_data["stderr"] = {}
-                for smiles in self.species.keys():
-                    mean[smiles] = {}
-                    stderr[smiles] = {}
-                    for i in range(nalpha):
-                        mean[smiles][i] = []
-                        stderr[smiles][i] = []
-                    mean["D"] = []
-                    stderr["D"] = []
-                if self._use_msd:
-                    mean = M_data["combined mean"] = {}
-                    stderr = M_data["combined stderr"] = {}
-                    for smiles in self.species.keys():
-                        mean[smiles] = {}
-                        stderr[smiles] = {}
-                        for i in range(nalpha):
-                            mean[smiles][i] = []
-                            stderr[smiles][i] = []
-                        mean["D"] = []
-                        stderr["D"] = []
-
-            # Create the plot for the Helfand moments
-            figure = self.create_figure(
-                module_path=("seamm",),
-                template="line.graph_template",
-                title="Helfand Moments",
-            )
-            plot = figure.add_plot("HelfandMoments")
-
-            x_axis = plot.add_axis("x", label="Time (ps)")
-            y_axis = plot.add_axis("y", label="M (Å^2)", anchor=x_axis)
-            x_axis.anchor = y_axis
-
-            for spec, smiles in enumerate(self.species.keys()):
-                coeffs = M_data["per_run"][smiles]
-                # Fit the slopes
-                fit = []
-                # Convert units. The Helfand moments include a factor of 1/2, so the
-                # Einstein equation has 1 for each direction, and 1/3 for the total
-                for i in range(nalpha):
-                    factor = Q_("Å^2/ps").m_as("m^2/s") / (1 if i < 3 else 3)
-                    if weighted:
-                        slope, err, xs, ys = fit_slope(
-                            self._M[spec][:, i],
-                            ts,
-                            sigma=self._M_err[spec][:, i],
-                            start=P["helfand_fit_start"],
-                            end=P["helfand_fit_end"],
-                        )
-                    else:
-                        slope, err, xs, ys = fit_slope(
-                            self._M[spec][:, i],
-                            ts,
-                            start=P["helfand_fit_start"],
-                            end=P["helfand_fit_end"],
-                        )
-                    d_coeff = slope * factor
-                    err = err * factor
-
-                    # Set a scale factor to make the numbers managable
-                    if self._scale is None:
-                        self._scale = 10 ** floor(log10(max(abs(d_coeff), 1.0e-20)))
-
-                    if correction is not None:
-                        d_coeff += correction
-
-                    M_data["per_run"][smiles][i].append(d_coeff)
-
-                    if run == 1:
-                        v = f"{d_coeff / self._scale:.2f}"
-                        M_data["mean"][smiles][i].append(float(v))
-                        M_data["stderr"][smiles][i].append(None)
-                    else:
-                        coeffs = M_data["per_run"][smiles][i]
-                        tmp = np.array(coeffs)
-                        mean = float(tmp.mean())
-                        std = float(tmp.std())
-                        stderr = std / sqrt(run - 1)
-                        v_mean, e_mean = fmt_err(
-                            mean / self._scale, 2 * stderr / self._scale, as_float=True
-                        )
-
-                        v, e = fmt_err(
-                            d_coeff / self._scale,
-                            2 * stderr / self._scale,
-                            as_float=True,
-                        )
-                        M_data["mean"][smiles][i].append(v_mean)
-                        M_data["stderr"][smiles][i].append(e_mean)
-
-                    if self._use_msd:
-                        tmp = np.array(
-                            M_data["per_run"][smiles][i]
-                            + msd_data["per_run"][smiles][i]
-                        )
-                        mean = float(tmp.mean())
-                        std = float(tmp.std())
-                        stderr = std / sqrt(2 * run - 1)
-                        v_mean, e_mean = fmt_err(
-                            mean / self._scale,
-                            2 * stderr / self._scale,
-                            as_float=True,
-                        )
-
-                        M_data["combined mean"][smiles][i].append(v_mean)
-                        M_data["combined stderr"][smiles][i].append(e_mean)
-
-                    fit.append(
-                        {
-                            "Species": smiles,
-                            "D": d_coeff,
-                            "stderr": err,
-                            "xs": xs,
-                            "ys": ys,
-                            "scale": self._scale,
-                            "D_s": v,
-                        }
-                    )
-
-                    if i == 0:
-                        if spec == 0:
-                            if not self._use_msd:
-                                table["Run"].append(run)
-                            else:
-                                table["Run"].append("")
-                            for var in self._state_vars:
-                                value = self._state[var][-1]
-                                if value != "":
-                                    if "density" in var:
-                                        value = round(value, 3)
-                                    else:
-                                        value = round(value, 1)
-                                var = var.replace(",stderr", " ±")
-                                table[var].append(value)
-                            table["      Method       "].append(
-                                "Helfand Moments".center(20)
-                            )
-                        else:
-                            table["Run"].append("")
-                            table["      Method       "].append("")
-                        table["Species"].append(smiles)
-                    alpha = self._tensor_labels[i][0]
-                    table["  D" + alpha + "  "].append(v)
-                    table["  e" + alpha + "  "].append("")
-
-                add_helfand_trace(
-                    plot,
-                    x_axis,
-                    y_axis,
-                    smiles,
-                    self._M[spec],
-                    ts,
-                    fit=fit,
-                )
-
-            figure.grid_plots("HelfandMoments")
-
-            # Write to disk
-            filename = "HelfandMoments.graph"
-            path = Path(self.directory) / filename
-            figure.dump(path)
-
-            if "html" in self.options and self.options["html"]:
-                path = path.with_suffix(".html")
-                figure.template = "line.html_template"
-                figure.dump(path)
-
-        # Add the current best estimates
-        if run > 1:
-            for spec, smiles in enumerate(self.species.keys()):
-                for i in range(nalpha):
-                    if self._use_msd:
-                        if i == 0:
-                            if spec == 0:
-                                table["Run"].append("")
-                                for var in self._state_vars:
-                                    if ",stderr" in var:
-                                        continue
-                                    tmp = np.array(self._state[var])
-                                    t_mean = float(tmp.mean())
-                                    std = float(tmp.std())
-                                    t_stderr = std / sqrt(run - 1)
-                                    t_v, t_e = fmt_err(
-                                        t_mean, 2 * t_stderr, as_float=True
-                                    )
-                                    table[var].append(t_v)
-                                    table[var + " ±"].append(t_e)
-                                if self._use_velocity:
-                                    table["      Method       "].append(
-                                        "Current MSD Estimate"
-                                    )
-                                else:
-                                    table["      Method       "].append(
-                                        "Current Estimate".center(20)
-                                    )
-                            else:
-                                table["Run"].append("")
-                                table["      Method       "].append("")
-                            table["Species"].append(smiles)
-
-                        mean = msd_data["mean"][smiles][i][-1]
-                        stderr = msd_data["stderr"][smiles][i][-1]
-                        alpha = self._tensor_labels[i][0]
-                        table["  D" + alpha + "  "].append(mean)
-                        table["  e" + alpha + "  "].append(stderr)
-                    if self._use_velocity:
-                        if i == 0:
-                            if spec == 0:
-                                table["Run"].append("")
-                                for var in self._state_vars:
-                                    if ",stderr" in var:
-                                        continue
-                                    tmp = np.array(self._state[var])
-                                    t_mean = float(tmp.mean())
-                                    std = float(tmp.std())
-                                    t_stderr = std / sqrt(run - 1)
-                                    t_v, t_e = fmt_err(
-                                        t_mean, 2 * t_stderr, as_float=True
-                                    )
-                                    table[var].append(t_v)
-                                    table[var + " ±"].append(t_e)
-                                if self._use_msd:
-                                    table["      Method       "].append(
-                                        "Current HM Estimate".center(20)
-                                    )
-                                else:
-                                    table["      Method       "].append(
-                                        "Current Estimate".center(20)
-                                    )
-                            else:
-                                table["Run"].append("")
-                                table["      Method       "].append("")
-                            table["Species"].append(smiles)
-
-                        mean = M_data["mean"][smiles][i][-1]
-                        stderr = M_data["stderr"][smiles][i][-1]
-                        alpha = self._tensor_labels[i][0]
-                        table["  D" + alpha + "  "].append(mean)
-                        table["  e" + alpha + "  "].append(stderr)
-                    if self._use_msd and self._use_velocity:
-                        if i == 0:
-                            if spec == 0:
-                                table["Run"].append("")
-                                for var in self._state_vars:
-                                    if ",stderr" in var:
-                                        continue
-                                    tmp = np.array(self._state[var])
-                                    t_mean = float(tmp.mean())
-                                    std = float(tmp.std())
-                                    t_stderr = std / sqrt(run - 1)
-                                    t_v, t_e = fmt_err(
-                                        t_mean, 2 * t_stderr, as_float=True
-                                    )
-                                    table[var].append(t_v)
-                                    table[var + " ±"].append(t_e)
-                                table["      Method       "].append(
-                                    "Combined Estimate".center(20)
-                                )
-                            else:
-                                table["Run"].append("")
-                                table["      Method       "].append("")
-                            table["Species"].append(smiles)
-
-                        mean = M_data["combined mean"][smiles][i][-1]
-                        stderr = M_data["combined stderr"][smiles][i][-1]
-                        alpha = self._tensor_labels[i][0]
-                        table["  D" + alpha + "  "].append(mean)
-                        table["  e" + alpha + "  "].append(stderr)
-
-        # Print the table of results
-        text = ""
-        tabulate.PRESERVE_WHITESPACE = True
-        tmp = tabulate.tabulate(
-            table,
-            headers="keys",
-            tablefmt="rounded_outline",
-            disable_numparse=True,
-        )
-        tabulate.PRESERVE_WHITESPACE = False
-        if False:
-            length = len(tmp.splitlines()[0])
-            text += "\n"
-            text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
-            text += "\n"
-            text += tmp
-        elif run == 1:
-            length = len(tmp.splitlines()[0])
-            text += "\n"
-            text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
-            text += "\n"
-            text += "\n".join(tmp.splitlines()[0:-1])
-        else:
-            first = 3
-            if run is not None and run == P["nruns"]:
-                text += "\n".join(tmp.splitlines()[first:])
-            else:
-                text += "\n".join(tmp.splitlines()[first:-1])
-
-        printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
-
-    def analyze(
-        self,
-        indent="",
-        P=None,
-        run=None,
-        weighted=False,
-        **kwargs,
-    ):
-        """Do any analysis of the output from this run.
-
-        Also print important results to the local step.out file using
-        "printer".
-
-        Parameters
-        ----------
-        indent: str
-            An extra indentation for the output
-        weighted : bool
-            Whether to use the stderr to weight the fit, default False
-        """
-
-        # Print the final table of results
-        table = {
-            "Species": [],
-            "Method": [],
-            "Dir": [],
-            "D": [],
-            "±": [],
-            "95%": [],
-        }
-        # First, the state variables
-        for var in self._state_vars:
-            if ",stderr" in var:
-                continue
-            n = len(self._state[var])
-            tmp = np.array(self._state[var])
-            if n == 1 or np.allclose(tmp, tmp[0], atol=0.0):
-                t_v = round(self._state[var][0], 3)
-                t_e = ""
-            else:
-                t_mean = float(tmp.mean())
-                std = float(tmp.std())
-                t_stderr = std / sqrt(n - 1)
-                t_v, t_e = fmt_err(t_mean, 2 * t_stderr, as_float=True)
-            table["Species"].append("")
-            table["Method"].append(var)
-            table["Dir"].append("")
-            table["D"].append(t_v)
-            table["95%"].append(t_e)
-            self.results[var] = t_v
-            try:
-                self.results[var + ",stderr"] = float(t_e)
-            except ValueError:
-                pass
-            if var == "a":
-                tmp = 1.0 / tmp
-                if n == 1 or np.allclose(tmp, tmp[0], atol=0.0):
-                    t_v = round(1 / self._state[var][0], 4)
-                    t_e = ""
-                else:
-                    t_mean = float(tmp.mean())
-                    std = float(tmp.std())
-                    t_stderr = std / sqrt(n - 1)
-                    t_v, t_e = fmt_err(t_mean, 2 * t_stderr, as_float=True)
-                self.results["1/L"] = t_v
-                try:
-                    self.results["1/L,stderr"] = float(t_e)
-                except ValueError:
-                    pass
-                table["Species"].append("")
-                table["Method"].append("1/L")
-                table["Dir"].append("")
-                table["D"].append(t_v)
-                table["95%"].append(t_e)
-
-        # Round to this many decimals to avoid unpleasant roundoff
-        decimals = -ceil(log10(self._scale)) + 6
-
-        if self._use_msd:
-            msd_data = self._msd_data
-            for smiles in self.species.keys():
-                for i in range(4):
-                    v = msd_data["mean"][smiles][i][-1]
-                    e = msd_data["stderr"][smiles][i][-1]
-                    d_coeff = round(v * self._scale, decimals)
-                    if e is not None:
-                        err = round(e * self._scale, decimals)
-                    table["Species"].append(smiles if i == 0 else "")
-                    table["Method"].append("MSD" if i == 0 else "")
-                    if self._tensor_labels[i][0] == " ":
-                        table["Dir"].append("total")
-                        if "D {key} (MSD)" in self.results:
-                            self.results["D {key} (MSD)"][smiles] = d_coeff
-                            if e is not None:
-                                self.results["D {key} (MSD),stderr"][smiles] = err
-                        else:
-                            self.results["D {key} (MSD)"] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results["D {key} (MSD),stderr"] = {smiles: err}
-                        if "D {key}" in self.results:
-                            self.results["D {key}"][smiles] = d_coeff
-                            if e is not None:
-                                self.results["D {key},stderr"][smiles] = err
-                        else:
-                            self.results["D {key}"] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results["D {key},stderr"] = {smiles: err}
-                    else:
-                        table["Dir"].append(self._tensor_labels[i][0])
-                        key = f"D{self._tensor_labels[i][0]}" + " {key} (MSD)"
-                        if key in self.results:
-                            self.results[key][smiles] = d_coeff
-                            if e is not None:
-                                self.results[key + ",stderr"][smiles] = err
-                        else:
-                            self.results[key] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results[key + ",stderr"] = {smiles: err}
-                        key = f"D{self._tensor_labels[i][0]}" + " {key}"
-                        if key in self.results:
-                            self.results[key][smiles] = d_coeff
-                            if e is not None:
-                                self.results[key + ",stderr"][smiles] = err
-                        else:
-                            self.results[key] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results[key + ",stderr"] = {smiles: err}
-                    table["D"].append(v)
-                    table["±"].append("±")
-                    table["95%"].append(e)
-        if self._use_velocity:
-            M_data = self._M_data
-            for smiles in self.species.keys():
-                for i in range(4):
-                    v = M_data["mean"][smiles][i][-1]
-                    e = M_data["stderr"][smiles][i][-1]
-                    d_coeff = round(v * self._scale, decimals)
-                    if e is not None:
-                        err = round(e * self._scale, decimals)
-                    table["Species"].append(smiles if i == 0 else "")
-                    table["Method"].append("Helfand Moments" if i == 0 else "")
-                    if self._tensor_labels[i][0] == " ":
-                        table["Dir"].append("total")
-                        if "D {key} (HM)" in self.results:
-                            self.results["D {key} (HM)"][smiles] = d_coeff
-                            if e is not None:
-                                self.results["D {key} (HM),stderr"][smiles] = err
-                        else:
-                            self.results["D {key} (HM)"] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results["D {key} (HM),stderr"] = {smiles: err}
-                        if "D {key}" in self.results:
-                            self.results["D {key}"][smiles] = d_coeff
-                            if e is not None:
-                                self.results["D {key},stderr"][smiles] = err
-                        else:
-                            self.results["D {key}"] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results["D {key},stderr"] = {smiles: err}
-                    else:
-                        table["Dir"].append(self._tensor_labels[i][0])
-                        key = f"D{self._tensor_labels[i][0]}" + " {key} (HM)"
-                        if key in self.results:
-                            self.results[key][smiles] = d_coeff
-                            if e is not None:
-                                self.results[key + ",stderr"][smiles] = err
-                        else:
-                            self.results[key] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results[key + ",stderr"] = {smiles: err}
-                        key = f"D{self._tensor_labels[i][0]}" + " {key}"
-                        if key in self.results:
-                            self.results[key][smiles] = d_coeff
-                            if e is not None:
-                                self.results[key + ",stderr"][smiles] = err
-                        else:
-                            self.results[key] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results[key + ",stderr"] = {smiles: err}
-                    table["D"].append(v)
-                    table["±"].append("±")
-                    table["95%"].append(e)
-        if self._use_msd and self._use_velocity:
-            M_data = self._M_data
-            for smiles in self.species.keys():
-                for i in range(4):
-                    v = M_data["combined mean"][smiles][i][-1]
-                    e = M_data["combined stderr"][smiles][i][-1]
-                    d_coeff = round(v * self._scale, decimals)
-                    if e is not None:
-                        err = round(e * self._scale, decimals)
-                    table["Species"].append(smiles if i == 0 else "")
-                    table["Method"].append("Combined" if i == 0 else "")
-                    if self._tensor_labels[i][0] == " ":
-                        table["Dir"].append("total")
-                        if "D {key}" in self.results:
-                            self.results["D {key}"][smiles] = d_coeff
-                            if e is not None:
-                                if "D {key},stderr" in self.results:
-                                    self.results["D {key},stderr"][smiles] = err
-                                else:
-                                    self.results["D {key},stderr"] = {smiles: err}
-                        else:
-                            self.results["D {key}"] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results["D {key},stderr"] = {smiles: err}
-                    else:
-                        table["Dir"].append(self._tensor_labels[i][0])
-                        key = f"D{self._tensor_labels[i][0]}" + " {key}"
-                        if key in self.results:
-                            self.results[key][smiles] = d_coeff
-                            if e is not None:
-                                if key + ",stderr" in self.results:
-                                    self.results[key + ",stderr"][smiles] = err
-                                else:
-                                    self.results[key + ",stderr"] = {smiles: err}
-                        else:
-                            self.results[key] = {smiles: d_coeff}
-                            if e is not None:
-                                self.results[key + ",stderr"] = {smiles: err}
-                    table["D"].append(v)
-                    table["±"].append("±")
-                    table["95%"].append(e)
-
-        # If requested, calculate the Yeh-Hummer correction for cell size
-        correction = None
-        if self._eta is not None:
-            if "T" in self._state_vars:
-                T = self._state["T"][-1]
-                if "a" in self._state_vars:
-                    L = self._state["a"][-1]
-                else:
-                    L = self._configuration.cell.a
-                L = Q_(L, "Å")
-
-                correction = yeh_hummer_correction(T, L.m_as("m"), self._eta)
-                table["Species"].append("")
-                table["Method"].append("Correction")
-                table["Dir"].append("")
-                table["D"].append(f"{correction / self._scale:.3f}")
-                table["±"].append("")
-                table["95%"].append("")
-
-        text = ""
-        tabulate.PRESERVE_WHITESPACE = True
-        tmp = tabulate.tabulate(
-            table,
-            headers="keys",
-            tablefmt="rounded_outline",
-            disable_numparse=True,
-            colalign=(
-                "center",
-                "center",
-                "center",
-                "decimal",
-                "decimal",
-            ),
-        )
-        tabulate.PRESERVE_WHITESPACE = False
-        length = len(tmp.splitlines()[0])
-        text += "\n"
-        text += f"Diffusion Coefficients (* {self._scale:.1e} m^2/s)".center(length)
-        text += "\n"
-        text += tmp
-        text += "\n"
-
-        printer.normal(__(text, indent=8 * " ", wrap=False, dedent=False))
-
-        # The viscosity should be for the same temperature
-        if (
-            correction is not None
-            and self._eta_T is not None
-            and abs(T - self._eta_T) > 2.0
-        ):
-            printer.normal(
-                __(
-                    f"Note: the viscosity is for {self._eta_T:.1f} K but the MD here "
-                    f"is at {T:.1f} K, so the Yeh-Hummer correction is approximate.",
-                    indent=8 * " ",
-                )
-            )
-            printer.normal("")
-
-        # And store results, only for the full output at the end. The model is
-        # the model chemistry's level if there is one (as LAMMPS uses it),
-        # else the Forcefield step's forcefield.
-        if self.variable_exists("_model_chemistry"):
-            self._model = self.get_variable("_model_chemistry")["level"]
-        else:
-            ff = self.get_variable("_forcefield")
-            if ff == "OpenKIM":
-                self._model = "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
-            elif ff == "PyTorch":
-                self._model = "PyTorch/" + self.get_variable("_pytorch_model")
-            else:
-                # Valence forcefield...
-                self._model = ff.current_forcefield
-
-        self.store_results(
-            configuration=self.configuration,
-            data=self.results,
-        )
+    def _reset(self):
+        """Clear the data of earlier runs, e.g. from an earlier loop iteration."""
+        self.paths = []  # The md.h5md file of each run
+        self._viscosity = None  # The viscosity for the Yeh-Hummer correction
 
     def create_parser(self):
         """Setup the command-line / config file parser"""
         parser_name = "diffusivity-step"
         parser = seamm_util.getParser()
 
-        # Remember if the parser exists ... this type of step may have been
-        # found before
         parser_exists = parser.exists(parser_name)
-
-        # Create the standard options, e.g. log-level
         super().create_parser(name=parser_name)
-
         if not parser_exists:
-            # Any options for diffusivity itself
             parser.add_argument(
                 parser_name,
                 "--html",
                 action="store_true",
                 help="whether to write out html files for graphs, etc.",
             )
-
-        # Now need to walk through the steps in the subflowchart...
-        self.subflowchart.reset_visited()
-        node = self.subflowchart.get_node("1").next()
-        while node is not None:
-            node = node.create_parser()
-
         return self.next()
-
-    def _viscosity_for_correction(self, P):
-        """The viscosity for the Yeh-Hummer correction, and where it came from.
-
-        Parameters
-        ----------
-        P : dict
-            The values of the parameters.
-
-        Returns
-        -------
-        float or None
-            The viscosity in Pa s, or None if the correction is not applied.
-        float or None
-            The temperature of the Viscosity step, in K, if it came from one.
-        str or None
-            A note for the output.
-        """
-        if not P["hydrodynamic correction"]:
-            return None, None, None
-        if P.get("viscosity source", "given value") == "given value":
-            eta = P["viscosity"]
-            if eta.magnitude <= 0:
-                return (
-                    None,
-                    None,
-                    "Note: the Yeh-Hummer correction is skipped because the "
-                    "viscosity given is not positive.",
-                )
-            return (
-                eta.m_as("Pa*s"),
-                None,
-                f"The Yeh-Hummer correction uses the given viscosity, {eta:~P}.",
-            )
-        record = preceding_viscosity(self)
-        if record is None:
-            return (
-                None,
-                None,
-                "Note: the Yeh-Hummer correction is skipped because no Viscosity "
-                "step ran before this one. Add one, or give the viscosity.",
-            )
-        eta = Q_(record["value"], "Pa*s").m_as("mPa*s")
-        text = f"The Yeh-Hummer correction uses the viscosity, {eta:.4g}"
-        if record.get("stderr") is not None:
-            text += f" ± {Q_(record['stderr'], 'Pa*s').m_as('mPa*s'):.2g}"
-        text += (
-            f" mPa*s, from step {record['id']} ({record['step']}, "
-            f"{record['method']}"
-        )
-        if record.get("T") is not None:
-            text += f", at {record['T']:.1f} K"
-        text += ")."
-        return record["value"], record.get("T"), text
 
     def description_text(self, P=None, short=False):
         """Create the text description of what this step will do.
-        The dictionary of control values is passed in as P so that
-        the code can test values, etc.
 
         Parameters
         ----------
         P: dict
             An optional dictionary of the current values of the control
             parameters.
+        short : bool
+            Not used: the description is always short.
+
         Returns
         -------
         str
@@ -1173,36 +192,35 @@ class Diffusivity(seamm.Node):
         if P is None:
             P = self.parameters.values_to_dict()
 
-        if P["approach"] == "both":
-            text = (
-                "Calculate the diffusivity using both the Helfand moments method and "
-                "the mean square displacement (MSD)"
+        approach = str(P["approach"])
+        use_msd, use_hm = self._approaches(approach)
+        text = "Calculate the self-diffusion coefficients of the species from "
+        if use_msd and use_hm:
+            text += (
+                "both the mean square displacement (MSD) and the Helfand moments of "
+                "the molecules"
             )
+        elif use_hm:
+            text += "the Helfand moments of the molecules"
         else:
-            text = f"Calculate the diffusivity using the {P['approach']} approach"
-        source = P.get("md source", run_own_md)
-        if source == run_own_md:
-            text += f", averaging over {P['nruns']} runs."
-        elif source == "files":
-            text += f", from the MD in {P['md files']}."
+            text += "the mean square displacement (MSD) of the molecules"
+        source = P["md source"]
+        if source == read_files:
+            text += f", for the MD in {P['md files']}."
         else:
-            text += f", from {source} earlier in the flowchart."
+            text += f", for {source} earlier in the flowchart."
 
-        if "Helfand" not in P["approach"]:
+        if use_msd:
             text += (
-                "The slope of the MSD vs time  will be fit from fraction "
-                f"{P['msd_fit_start']} to {P['msd_fit_end']} of the total "
-                "curve."
+                f" The slope of the MSD is fit from {P['msd_fit_start']} to "
+                f"{P['msd_fit_end']} of the curve."
             )
-        if "MSD" not in P["approach"]:
+        if use_hm:
             text += (
-                "The numerical integral for the Helfand moments will use a maximum of "
-                "{maximum Helfand Integral length} steps. The cost scales as the "
-                "square of the number of steps in the integration, so be cautious "
-                "with large values. "
-                "The slope of the Helfand moment vs time  will be fit from fraction "
-                f"{P['helfand_fit_start']} to {P['helfand_fit_end']} of "
-                "the total curve."
+                " The Helfand moments are integrated over at most "
+                f"{P['maximum Helfand Integral length']} steps -- the cost grows as "
+                "the square of the number -- and their slope is fit from "
+                f"{P['helfand_fit_start']} to {P['helfand_fit_end']} of the curve."
             )
 
         correction = P["hydrodynamic correction"]
@@ -1216,60 +234,28 @@ class Diffusivity(seamm.Node):
                 correction = "yes" in correction
             if correction:
                 text += (
-                    " The calculated diffusivity will be corrected for the finite cell "
-                    "size using the Yeh-Hummer hydrodynamic correction"
+                    " The diffusion coefficients are also given corrected for the "
+                    "finite size of the cell with the Yeh-Hummer correction"
                 )
                 if P.get("viscosity source", "given value") == "given value":
-                    text += f" with a viscosity of {P['viscosity']}."
+                    text += f", using a viscosity of {P['viscosity']}."
                 else:
                     text += (
-                        " with the viscosity from the preceding Viscosity step, if "
+                        ", using the viscosity from the preceding Viscosity step, if "
                         "there is one."
                     )
 
-        text += "\n\n"
+        return self.header + "\n" + __(text, indent=4 * " ").__str__()
 
-        # Make sure the subflowchart has the data from the parent flowchart
-        self.subflowchart.root_directory = self.flowchart.root_directory
-        self.subflowchart.executor = self.flowchart.executor
-        self.subflowchart.in_jobserver = self.subflowchart.in_jobserver
-
-        if not short and source == run_own_md:
-            # Get the first real node
-            node = self.subflowchart.get_node("1").next()
-            if node is not None:
-                node.all_options = self.all_options
-
-            while node is not None:
-                try:
-                    text += __(node.description_text()).__str__()
-                except Exception as e:
-                    print(f"Error describing diffusivity flowchart: {e} in {node}")
-                    logger.critical(
-                        f"Error describing diffusivity flowchart: {e} in {node}"
-                    )
-                    raise
-                except:  # noqa: E722
-                    print(
-                        "Unexpected error describing diffusivity flowchart: "
-                        f"{sys.exc_info()[0]} in {str(node)}"
-                    )
-                    logger.critical(
-                        "Unexpected error describing diffusivity flowchart: "
-                        f"{sys.exc_info()[0]} in {str(node)}"
-                    )
-                    raise
-                text += "\n"
-                node = node.next()
-
-        return self.header + "\n" + __(text, **P, indent=4 * " ").__str__()
+    @staticmethod
+    def _approaches(approach):
+        """Whether to use the MSD and the Helfand moments."""
+        approach = str(approach).lower()
+        both = approach == "both"
+        return both or "msd" in approach, both or "helfand" in approach
 
     def run(self):
         """Run the diffusivity step.
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
@@ -1277,148 +263,929 @@ class Diffusivity(seamm.Node):
             The next node object in the flowchart.
         """
         next_node = super().run(printer)
+        self._reset()
 
         # Get the values of the parameters, dereferencing any variables
         P = self.parameters.current_values_to_dict(
             context=seamm.flowchart_variables._data
         )
+        printer.important(__(self.description_text(P), indent=self.indent))
 
-        # Remember the configuration
-        _, self._configuration = self.get_system_configuration()
-        if self._configuration.periodicity != 3:
+        _, configuration = self.get_system_configuration()
+        if configuration.periodicity != 3:
             raise RuntimeError(
                 "The Diffusivity step needs a periodic system: the diffusion "
                 "coefficient of a cluster or molecule is not a bulk property, and "
                 "the finite-size correction needs the cell."
             )
 
-        # Reset parameters if called in e.g. loop
-        self._n_molecules = None
-        self._species = None
-
-        self.state_vars = {}
-        self._results = {}
-
-        self._use_msd = False
-        self._msd_dt = None
-        self._msds = None
-        self._msd_errs = None
-        self._msd = None
-        self._msd_err = None
-        self._scale = None  # Factor to make the results nice numbers
-        self._msd_data = {}
-
-        self._use_velocity = False
-        self._velocity_dt = None
-        self._Ms = None
-        self._M_errs = None
-        self._M = None
-        self._M_err = None
-        self._M_coeff = []
-        self._M_stderr = []
-        self._M_data = {}
-
-        self._state = {}
-
-        self._msd_samples = None
-        self._msd_times = []
-        self._helfand_integral_length = None
-        self._helfand_integral_times = []
-
-        # Decide what to do
-        approach = P["approach"].lower()
-        self._use_msd = approach == "both" or "msd" in approach
-        self._use_velocity = approach == "both" or "helfand" in approach
-
-        # Print what we are doing
-        printer.important(__(self.description_text(P, short=True), indent=self.indent))
-
         # The viscosity for the Yeh-Hummer correction, and where it came from
-        self._eta, self._eta_T, text = self._viscosity_for_correction(P)
+        self._viscosity, text = self._viscosity_for_correction(P)
         if text is not None:
             printer.important(__(text, indent=self.indent + 4 * " "))
             printer.important("")
 
-        # Transfer key parameters to results
-        self._results = {}
-        for key, value in P.items():
-            self.results[key] = value
-
-        # And the species...
-        table = {
-            "SMILES": [*self.species.keys()],
-            "Count": [len(x) for x in self.species.values()],
-            "mol %": [
-                f"{100*len(x)/self.n_molecules:.2f}" for x in self.species.values()
-            ],
-        }
-        tmp = tabulate.tabulate(
-            table,
-            headers="keys",
-            tablefmt="simple_outline",
-            disable_numparse=True,
-            colalign=(
-                "center",
-                "decimal",
-                "decimal",
-            ),
-        )
-        length = len(tmp.splitlines()[0])
-        text = "\n"
-        text += "Species".center(length)
-        text += "\n"
-        text += tmp
-        text += "\n"
-        printer.important(__(text, indent=8 * " ", wrap=False, dedent=False))
-
-        # Find the handler for job.out and set the level up
-        job_handler = None
-        out_handler = None
-        job_level = None
-        out_level = None
-        for handler in job.handlers:
-            if (
-                isinstance(handler, logging.FileHandler)
-                and "job.out" in handler.baseFilename
-            ):
-                job_handler = handler
-                job_level = job_handler.level
-                job_handler.setLevel(printing.JOB)
-            elif isinstance(handler, logging.StreamHandler):
-                out_handler = handler
-                out_level = out_handler.level
-                out_handler.setLevel(printing.JOB)
-
-        self._handlers = (job_handler, job_level, out_handler, out_level)
-        if P["md source"] == run_own_md:
-            self._run_replicas(P)
-        else:
-            self._analyze_earlier_md(P)
-
-        # Remove any redirection of printing.
-        if self._file_handler is not None:
-            self._file_handler.close()
-            job.removeHandler(self._file_handler)
-            self._file_handler = None
-        if job_handler is not None:
-            job_handler.setLevel(job_level)
-        if out_handler is not None:
-            out_handler.setLevel(out_level)
-
-        # Analyze the results
-        if self._scale is None:
-            # No run gave results, e.g. every run failed with errors set to continue
-            raise RuntimeError(
-                "None of the runs gave results, so there is nothing to analyze."
+        self.paths = self._md_paths(P)
+        n = len(self.paths)
+        printer.job(
+            __(
+                f"Analyzing {n} MD run{'s' if n > 1 else ''}: "
+                + ", ".join(str(p) for p in self.paths),
+                indent=self.indent + 4 * " ",
             )
-        self.analyze(P=P, style="full")
+        )
 
-        # Add other citations here or in the appropriate place in the code.
-        # Add the bibtex to data/references.bib, and add a self.reference.cite
-        # similar to the above to actually add the citation to the references.
-
+        self.analyze(P=P, configuration=configuration)
         return next_node
 
+    def _md_paths(self, P):
+        """The md.h5md files to analyze: those of the runs that sampled the first
+        need, as checked before the job ran."""
+        for name in self.md_requirements(P).needs[0].names:
+            try:
+                return md_inputs(self, P, name=name)
+            except RuntimeError:
+                continue
+        return md_inputs(self, P)
+
+    def _viscosity_for_correction(self, P):
+        """The viscosity for the Yeh-Hummer correction, and where it came from.
+
+        Parameters
+        ----------
+        P : dict
+            The values of the parameters.
+
+        Returns
+        -------
+        dict or None
+            The viscosity: "value" and "stderr" (Pa s, the error may be None), "T"
+            (K, or None) and "origin", for the output; None if the correction is
+            not applied.
+        str or None
+            A note for the output.
+        """
+        if not P["hydrodynamic correction"]:
+            return None, None
+        if P.get("viscosity source", "given value") == "given value":
+            eta = P["viscosity"]
+            if eta.magnitude <= 0:
+                return (
+                    None,
+                    "Note: the Yeh-Hummer correction is skipped because the "
+                    "viscosity given is not positive.",
+                )
+            record = {
+                "value": eta.m_as("Pa*s"),
+                "stderr": None,
+                "T": None,
+                "origin": "given in this step",
+            }
+            text = f"The Yeh-Hummer correction uses the given viscosity, {eta:~P}."
+            return record, text
+        published = preceding_viscosity(self)
+        if published is None:
+            return (
+                None,
+                "Note: the Yeh-Hummer correction is skipped because no Viscosity "
+                "step ran before this one. Add one, or give the viscosity.",
+            )
+        origin = (
+            f"from step {published['id']} ({published['step']}, "
+            f"{published['method']}"
+        )
+        if published.get("T") is not None:
+            origin += f", at {published['T']:.1f} K"
+        origin += ")"
+        record = {
+            "value": published["value"],
+            "stderr": published.get("stderr"),
+            "T": published.get("T"),
+            "origin": origin,
+        }
+        eta = Q_(published["value"], "Pa*s").m_as("mPa*s")
+        text = f"The Yeh-Hummer correction uses the viscosity, {eta:.4g}"
+        if record["stderr"] is not None:
+            error = Q_(record["stderr"], "Pa*s").m_as("mPa*s")
+            text += f" ± {error:.2g} (standard error)"
+        text += f" mPa*s, {origin}."
+        return record, text
+
+    # ------------------------------------------------------------------
+    # Reading the runs
+    # ------------------------------------------------------------------
+    @staticmethod
+    def species(configuration):
+        """The molecules of each species.
+
+        Returns
+        -------
+        {str: [int]}
+            The molecules (0-based) of each species, by canonical SMILES, in the
+            order of find_molecules.
+        """
+        result = {}
+        for molecule, smiles in enumerate(configuration.get_molecule_smiles()):
+            result.setdefault(smiles, []).append(molecule)
+        return result
+
+    def _read(self, path, molecules, masses, use_msd, use_hm):
+        """What the analysis needs from one run.
+
+        Returns
+        -------
+        dict
+            "position" (Å) and "velocity" (Å/fs) of the molecules' centres of
+            mass, (n_frames, n_molecules, 3), with "position dt" and "velocity dt"
+            (fs); the mean temperature "T" (K), volume "V" (Å³) and "L", the cube
+            root of the volume (Å); and "isotropic", (bool, reason), and "cubic".
+        """
+        result = {"path": path}
+        with open_md(path) as md:
+            if not md.periodic:
+                raise RuntimeError(
+                    f"The MD in {path} is not periodic, so it has no diffusivity."
+                )
+            state = run_state(md)
+            result["T"] = state.temperature
+            result["V"] = state.volume
+            result["L"] = None if not state.volume else state.volume ** (1 / 3)
+            result["isotropic"] = isotropy(md)
+            result["cubic"] = is_cubic(md.cell())
+            for name, units, use in (
+                ("position", "Å", use_msd),
+                ("velocity", "Å/fs", use_hm),
+            ):
+                if use:
+                    values, dt = self._molecular(
+                        md, name, units, molecules, masses, path
+                    )
+                    result[name] = values
+                    result[name + " dt"] = dt
+        return result
+
+    @staticmethod
+    def _molecular(md, name, units, molecules, masses=None, path=""):
+        """The positions or velocities of the molecules' centres of mass.
+
+        From the molecules' group if the MD sampled it, otherwise from the atoms':
+        the positions are unwrapped, so the molecules are whole.
+
+        Parameters
+        ----------
+        md : seamm_md_analysis.MDData
+            The run.
+        name : str
+            "position" or "velocity".
+        units : str
+            The units to return them in.
+        molecules : [[int]]
+            The atoms (0-based) of each molecule.
+        masses : array_like = None
+            The masses of the atoms, if the file has none.
+        path : str
+            The file, for messages.
+
+        Returns
+        -------
+        numpy.ndarray(n_frames, n_molecules, 3), float
+            The values, and the interval between frames in fs (None for one frame).
+        """
+        n_molecules = len(molecules)
+        if md.has_particles(name, "molecules"):
+            series = md.particle_series(
+                name, group="molecules", units=units, time_units="fs"
+            )
+            if series.values.shape[1] != n_molecules:
+                raise RuntimeError(
+                    f"The MD in {path} has the {name}s of {series.values.shape[1]} "
+                    f"molecules, but the structure has {n_molecules}."
+                )
+            dt = series.dt
+            return series.values, None if dt is None else float(dt.m_as("fs"))
+        if not md.has_particles(name, "all"):
+            raise RuntimeError(
+                f"The MD in {path} did not sample the {name}s of the molecules or "
+                "of the atoms."
+            )
+        if name == "position":
+            attrs = md.first["particles/all/position/value"].attrs
+            if not attrs.get("seamm_unwrapped", 0):
+                raise RuntimeError(
+                    f"The atomic positions in {path} are not unwrapped, so the "
+                    "centres of mass of the molecules cannot be found. Sample the "
+                    "positions of the molecules' centres of mass."
+                )
+        file_masses = md.masses("all")
+        if file_masses is not None:
+            masses = file_masses
+        if masses is None:
+            raise RuntimeError(f"The MD in {path} has no masses for the atoms.")
+        masses = np.asarray(masses, dtype=float)
+        n_atoms = len(md.ids("all"))
+        sizes = [len(m) for m in molecules]
+        if n_atoms != sum(sizes) or len(masses) != n_atoms:
+            raise RuntimeError(
+                f"The MD in {path} has {n_atoms} atoms, but the structure has "
+                f"{sum(sizes)}."
+            )
+        atoms = np.concatenate([np.asarray(m, dtype=int) for m in molecules])
+        starts = np.cumsum([0] + sizes[:-1])
+        weights = masses[atoms]
+        weights = weights / np.repeat(np.add.reduceat(weights, starts), sizes)
+        values = []
+        times = []
+        for _, t, chunk in md.iter_frames(
+            group="all",
+            fields=(name,),
+            chunk=CHUNK,
+            units={name: units},
+            time_units="fs",
+        ):
+            weighted = chunk[name][:, atoms, :] * weights[None, :, None]
+            values.append(np.add.reduceat(weighted, starts, axis=1))
+            times.append(np.asarray(t, dtype=float))
+        values = np.concatenate(values)
+        times = np.concatenate(times)
+        dt = float(np.median(np.diff(times))) if len(times) > 1 else None
+        return values, dt
+
+    @staticmethod
+    def _split_into_blocks(run, n_blocks):
+        """Divide one run into consecutive blocks, analyzed as separate samples."""
+        n_blocks = max(1, int(n_blocks))
+        blocks = [dict(run) for _ in range(n_blocks)]
+        for name in ("position", "velocity"):
+            values = run.get(name)
+            if values is None:
+                continue
+            n = len(values) // n_blocks
+            if n < MIN_FRAMES:
+                raise RuntimeError(
+                    f"The run has only {len(values)} frames of the {name}s, too few "
+                    f"for {n_blocks} blocks."
+                )
+            for i in range(n_blocks):
+                blocks[i][name] = values[i * n : (i + 1) * n]
+        return blocks
+
+    # ------------------------------------------------------------------
+    # The analysis
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _fit_msd(sample, species, start, end):
+        """The diffusion coefficient in each direction from the MSD.
+
+        Returns
+        -------
+        numpy.ndarray(n_species, 3)
+            D in m^2/s.
+        [numpy.ndarray(n, 4)]
+            The MSD of each species, in Å^2.
+        numpy.ndarray(n)
+            The times, in ps.
+        """
+        positions = sample["position"]
+        msd, _ = msd_by_species(positions, species)
+        ts = np.arange(positions.shape[0]) * sample["position dt"] / 1000
+        # The Einstein relation: MSD = 2 D t in each direction
+        D = np.array(
+            [
+                [
+                    fit_slope(curve[:, i], ts, start=start, end=end).slope
+                    * A2_PER_PS
+                    / 2
+                    for i in range(3)
+                ]
+                for curve in msd
+            ]
+        )
+        return D, msd, ts
+
+    @staticmethod
+    def _fit_helfand(sample, species, max_length, start, end):
+        """The diffusion coefficient in each direction from the Helfand moments.
+
+        Returns
+        -------
+        numpy.ndarray(n_species, 3)
+            D in m^2/s.
+        [numpy.ndarray(m, 4)]
+            The Helfand moments of each species, in Å^2.
+        numpy.ndarray(m)
+            The times, in ps.
+        int
+            The length of the integration, in frames.
+        """
+        velocities = sample["velocity"]
+        dt = sample["velocity dt"]
+        m = min(velocities.shape[0] // 2, int(max_length))
+        M, _ = species_helfand_moments(velocities, species, m=m)
+        # Å²/fs² × fs², and the factor of 1/2 in the moments
+        M = [moment * dt**2 / 2 for moment in M]
+        ts = np.arange(m) * dt / 1000
+        D = np.array(
+            [
+                [
+                    fit_slope(curve[:, i], ts, start=start, end=end).slope * A2_PER_PS
+                    for i in range(3)
+                ]
+                for curve in M
+            ]
+        )
+        return D, M, ts, m
+
+    def analyze(self, indent="", P=None, configuration=None, **kwargs):
+        """Analyze, print, plot and store the diffusion coefficients.
+
+        Parameters
+        ----------
+        indent : str
+            An extra indentation for the output.
+        P : dict
+            The values of the parameters.
+        configuration : molsystem._Configuration
+            The structure that was simulated.
+        """
+        if configuration is None:
+            raise RuntimeError("There is no structure to analyze.")
+        species = self.species(configuration)
+        names = list(species)
+        species_lists = list(species.values())
+        molecules = configuration.find_molecules(as_indices=True)
+        masses = configuration.atoms.atomic_masses
+        self._print_species(species, len(molecules))
+
+        use_msd, use_hm = self._approaches(P["approach"])
+        methods = (["MSD"] if use_msd else []) + (["HM"] if use_hm else [])
+        nruns = len(self.paths)
+        source = "runs" if nruns > 1 else "blocks"
+
+        # One run at a time, keeping only the results, so that the memory needed
+        # does not grow with the number of runs. Each run, or each block of a
+        # single run, is a sample.
+        runs = []
+        samples = []
+        D = {m: [] for m in methods}  # (n_samples, n_species, 3)
+        curves = {m: [] for m in methods}
+        timings = {m: 0.0 for m in methods}
+        integral_length = None
+        for path in self.paths:
+            run = self._read(path, molecules, masses, use_msd, use_hm)
+            if nruns > 1:
+                pieces = [run]
+            else:
+                pieces = self._split_into_blocks(run, P["number of blocks"])
+            for piece in pieces:
+                if use_msd:
+                    tic = time.perf_counter()
+                    d, msd, ts = self._fit_msd(
+                        piece, species_lists, P["msd_fit_start"], P["msd_fit_end"]
+                    )
+                    timings["MSD"] += time.perf_counter() - tic
+                    D["MSD"].append(d)
+                    curves["MSD"].append((msd, ts))
+                if use_hm:
+                    tic = time.perf_counter()
+                    d, M, ts, integral_length = self._fit_helfand(
+                        piece,
+                        species_lists,
+                        P["maximum Helfand Integral length"],
+                        P["helfand_fit_start"],
+                        P["helfand_fit_end"],
+                    )
+                    timings["HM"] += time.perf_counter() - tic
+                    D["HM"].append(d)
+                    curves["HM"].append((M, ts))
+                samples.append(self._summary(piece))
+            runs.append(self._summary(run))
+            del run, pieces
+        n_samples = len(samples)
+        D = {m: np.array(values) for m, values in D.items()}
+        if use_msd and use_hm:
+            # The average of the two methods in each sample
+            methods.append("both")
+            D["both"] = (D["MSD"] + D["HM"]) / 2
+        best = methods[-1]
+
+        def estimate(values):
+            values = np.asarray(values, dtype=float)
+            if len(values) < 2:
+                return Estimate(float(values[0]), None, 1, source=source)
+            return Estimate.from_samples(values, source=source)
+
+        # The Yeh-Hummer correction for each sample, and its error from that of η
+        correction, notes = self._correction(samples)
+
+        def corrected(values):
+            if correction is None:
+                return None
+            result = estimate(np.asarray(values) + correction["samples"])
+            if result.stderr is not None and correction["stderr"] is not None:
+                result.stderr = sqrt(result.stderr**2 + correction["stderr"] ** 2)
+            return result
+
+        # The estimates: D is the average of the directions in each sample
+        estimates = {}
+        for m in methods:
+            for s in range(len(names)):
+                values = D[m][:, s, :]
+                average = values.mean(axis=1)
+                estimates[m, s, "D"] = (estimate(average), corrected(average))
+                for i, c in enumerate(DIRECTIONS):
+                    estimates[m, s, f"D{c}"] = (
+                        estimate(values[:, i]),
+                        corrected(values[:, i]),
+                    )
+
+        largest = max(
+            (
+                abs(estimates[m, s, "D"][0].value)
+                for m in methods
+                for s in range(len(names))
+            ),
+            default=0.0,
+        )
+        exponent = floor(log10(largest)) if largest > 0 else 0
+        scale = 10.0**exponent
+        unit = f"{power_of_ten(exponent)} m²/s"
+
+        isotropic = True
+        why = ""
+        for run in runs:
+            if not run["isotropic"][0]:
+                isotropic, why = run["isotropic"]
+                break
+
+        self._print_table(
+            names, methods, estimates, isotropic, correction is not None, scale, unit
+        )
+
+        # What the table shows
+        lines = []
+        what = (
+            f"{nruns} independent runs"
+            if source == "runs"
+            else f"{n_samples} blocks of one run"
+        )
+        lengths = self._sample_lengths(samples)
+        text = f"From {what}"
+        if lengths:
+            text += f" of {lengths} each"
+        text += ". " + estimates[best, 0, "D"][0].describe_error()
+        lines.append(text)
+        if "both" in methods:
+            lines.append(
+                f"Combined is the average of the MSD and Helfand-moment values in "
+                f"each {source[:-1]}."
+            )
+        if isotropic:
+            lines.append(self._isotropy_line(names, methods, D))
+        else:
+            lines.append(
+                f"The run is not treated as isotropic ({why}), so the components "
+                "are given; D is their average."
+            )
+        if correction is not None:
+            lines.append(self._correction_text(correction, scale, unit))
+        lines.extend(notes)
+        for line in lines:
+            if line:
+                printer.normal(__(line, indent=8 * " "))
+        printer.normal("")
+
+        self._print_samples(names, methods, D, samples, source, scale, unit)
+        text = []
+        if "MSD" in timings:
+            text.append(
+                f"The MSD, of {samples[0]['position frames']} frames per "
+                f"{source[:-1]}, took {timings['MSD']:.2f} s in all"
+            )
+        if "HM" in timings:
+            text.append(
+                f"the Helfand moments, integrated over {integral_length} frames, "
+                f"took {timings['HM']:.2f} s"
+            )
+        if text:
+            text = "; ".join(text) + "."
+            text = text[0].upper() + text[1:]
+            print_details(printer, str(__(text, indent=8 * " ")) + "\n")
+
+        state = report_state(self, printer, self.paths)
+
+        self._plot(names, curves, P, scale)
+
+        # The results. "D" is corrected for the cell size if the correction is
+        # applied, as before; "D (box)" is the value in the periodic cell.
+        data = {
+            "approach": P["approach"],
+            "nruns": nruns,
+        }
+        if use_msd:
+            data["msd_fit_start"] = P["msd_fit_start"]
+            data["msd_fit_end"] = P["msd_fit_end"]
+            data["msd samples"] = samples[0]["position frames"]
+            data["t_msd"] = round(timings["MSD"], 3)
+        if use_hm:
+            data["helfand_fit_start"] = P["helfand_fit_start"]
+            data["helfand_fit_end"] = P["helfand_fit_end"]
+            data["Helfand integral length"] = integral_length
+            data["t_hm"] = round(timings["HM"], 3)
+        keys = [(m, SUFFIX[m]) for m in methods if m != "both"] + [(best, "")]
+        for m, suffix in keys:
+            for s, name in enumerate(names):
+                for component in ("D", "Dx", "Dy", "Dz"):
+                    box, fixed = estimates[m, s, component]
+                    value = box if fixed is None else fixed
+                    key = f"{component} {{key}}{suffix}"
+                    data.setdefault(key, {})[name] = value.value
+                    if value.stderr is not None:
+                        data.setdefault(key + ",stderr", {})[name] = value.stderr
+        for s, name in enumerate(names):
+            box = estimates[best, s, "D"][0]
+            data.setdefault("D (box) {key}", {})[name] = box.value
+            if box.stderr is not None:
+                data.setdefault("D (box) {key},stderr", {})[name] = box.stderr
+        if correction is not None:
+            data["Yeh-Hummer correction"] = correction["value"]
+            if correction["stderr"] is not None:
+                data["Yeh-Hummer correction,stderr"] = correction["stderr"]
+            data["viscosity for correction"] = Q_(correction["eta"], "Pa*s").m_as(
+                "mPa*s"
+            )
+        inverse = [1 / r["L"] for r in runs if r["L"]]
+        if inverse:
+            one_over_L = Estimate.from_samples(inverse)
+            data["1/L"] = one_over_L.value
+            if one_over_L.stderr:
+                data["1/L,stderr"] = one_over_L.stderr
+        if state is not None:
+            data.update(state_data(state))
+
+        self.model = self._find_model()
+        self.store_results(configuration=configuration, data=data)
+        return data
+
+    @staticmethod
+    def _summary(sample):
+        """A run or block without its trajectory: the number of frames of the
+        positions and velocities, the interval between them, and the state."""
+        result = {k: v for k, v in sample.items() if k not in ("position", "velocity")}
+        for name in ("position", "velocity"):
+            if sample.get(name) is not None:
+                result[name + " frames"] = len(sample[name])
+        return result
+
+    @staticmethod
+    def _sample_lengths(samples):
+        """The length of the samples, e.g. "100 ps", or "" if not known."""
+        for name in ("position", "velocity"):
+            n = samples[0].get(name + " frames")
+            dt = samples[0].get(name + " dt")
+            if n is not None and dt is not None:
+                return f"{n * dt / 1000:.4g} ps"
+        return ""
+
+    def _correction(self, samples):
+        """The Yeh-Hummer correction of each sample, from its temperature and the
+        size of the cell.
+
+        Returns
+        -------
+        dict or None
+            "samples" (m^2/s, one per sample), its mean "value", "stderr" from the
+            error of the viscosity (or None), "eta" (Pa s), its "eta stderr" and
+            "origin", and the mean "T" (K) and "L" (Å); None if not applied.
+        [str]
+            Notes for the output.
+        """
+        notes = []
+        record = self._viscosity
+        if record is None:
+            return None, notes
+        T = [s["T"] for s in samples]
+        L = [s["L"] for s in samples]
+        if any(t is None for t in T) or any(x is None for x in L):
+            notes.append(
+                "Note: the runs did not record the temperature or the cell, so the "
+                "Yeh-Hummer correction is skipped."
+            )
+            return None, notes
+        eta = record["value"]
+        corrections = np.array(
+            [yeh_hummer_correction(t, x * 1.0e-10, eta) for t, x in zip(T, L)]
+        )
+        value = float(corrections.mean())
+        stderr = None
+        if record.get("stderr") is not None:
+            stderr = value * record["stderr"] / eta
+        result = {
+            "samples": corrections,
+            "value": value,
+            "stderr": stderr,
+            "eta": eta,
+            "eta stderr": record.get("stderr"),
+            "origin": record["origin"],
+            "T": float(np.mean(T)),
+            "L": float(np.mean(L)),
+            "varies": len(samples) > 1 and np.ptp(L) > 1.0e-6 * np.mean(L),
+        }
+        if not all(s["cubic"] for s in samples):
+            notes.append(
+                "Note: the cell is not cubic, so the Yeh-Hummer correction, which is "
+                "for a cubic cell, is approximate; L is the cube root of the volume."
+            )
+        if record.get("T") is not None and abs(result["T"] - record["T"]) > 2.0:
+            notes.append(
+                f"Note: the viscosity is for {record['T']:.1f} K but the MD here is "
+                f"at {result['T']:.1f} K, so the Yeh-Hummer correction is "
+                "approximate."
+            )
+        self.references.cite(
+            raw=self._bibliography["Yeh2004"],
+            alias="Yeh2004",
+            module="diffusivity_step",
+            level=1,
+            note="The Yeh-Hummer correction of the diffusivity for the cell size.",
+        )
+        return result, notes
+
+    @staticmethod
+    def _correction_text(correction, scale, unit):
+        """A description of the correction, its error and the viscosity used."""
+        value = correction["value"] / scale
+        text = (
+            "D corrected = D (box) + ΔD, the Yeh-Hummer correction for the "
+            "hydrodynamic interaction of a molecule with its periodic images: "
+            "ΔD = ξ kB T / (6π η L) = "
+        )
+        if correction["stderr"] is not None:
+            error = correction["stderr"] / scale
+            text += f"({value:.3g} ± {error:.2g} standard error) × {unit}"
+        else:
+            text += f"{value:.3g} × {unit}"
+        T = correction["T"]
+        L = correction["L"]
+        mean = "the mean " if correction["varies"] else ""
+        text += (
+            f", with ξ = {YEH_HUMMER_XI}, {mean}T = {T:.1f} K, {mean}L = "
+            f"{L:.3f} Å (1/L = {1 / L:.5f} Å⁻¹) and η = "
+            f"{Q_(correction['eta'], 'Pa*s').m_as('mPa*s'):.4g}"
+        )
+        if correction["eta stderr"] is not None:
+            error = Q_(correction["eta stderr"], "Pa*s").m_as("mPa*s")
+            text += f" ± {error:.2g} (standard error)"
+        text += f" mPa·s, {correction['origin']}."
+        if correction["stderr"] is not None:
+            text += " The ± of D corrected includes the error of η."
+        return text
+
+    @staticmethod
+    def _isotropy_line(names, methods, D):
+        """One line saying whether the diffusion is the same in every direction."""
+        checks = []
+        for m in methods:
+            if m == "both":
+                continue
+            for s, name in enumerate(names):
+                labels = [f"D{c} of {name} ({METHODS[m]})" for c in DIRECTIONS]
+                checks.append(component_check(D[m][:, s, :], names=labels))
+        usable = [c for c in checks if c.p is not None]
+        if len(usable) == 0:
+            return checks[0].text if checks else ""
+        if len(usable) == 1:
+            return usable[0].text
+        differ = [c for c in usable if not c.agree]
+        if len(differ) == 0:
+            what = " and method" if len([m for m in methods if m != "both"]) > 1 else ""
+            worst = max(usable, key=lambda c: c.chi2 / c.dof)
+            return (
+                f"Isotropy: the components agree for every species{what} "
+                f"(largest χ²/dof = {worst.chi2 / worst.dof:.2f}, p = {worst.p:.2g})."
+            )
+        return " ".join(c.text for c in differ)
+
+    def _print_species(self, species, n_molecules):
+        """The species and their numbers."""
+        table = {
+            "Species": list(species),
+            "Count": [len(x) for x in species.values()],
+            "mol %": [f"{100 * len(x) / n_molecules:.2f}" for x in species.values()],
+        }
+        text = tabulate(
+            table,
+            headers="keys",
+            tablefmt="rounded_outline",
+            disable_numparse=True,
+            colalign=("left", "decimal", "decimal"),
+        )
+        length = len(text.splitlines()[0])
+        printer.important(
+            __(
+                "\n" + "Species".center(length) + "\n" + text + "\n",
+                indent=8 * " ",
+                wrap=False,
+                dedent=False,
+            )
+        )
+
+    def _print_table(
+        self, names, methods, estimates, isotropic, with_correction, scale, unit
+    ):
+        """The main table: D of each species, in the box and corrected."""
+        headers = ["Species", "Method"]
+        if not isotropic:
+            headers.append("Component")
+        headers += ["D (box)" if with_correction else "D", "± (95%)"]
+        if with_correction:
+            headers += ["D corrected", "± (95%)"]
+
+        def scaled(estimate):
+            return Estimate(
+                estimate.value / scale,
+                None if estimate.stderr is None else estimate.stderr / scale,
+                estimate.n,
+                source=estimate.source,
+            ).formatted()
+
+        components = ["D"] if isotropic else ["D", "Dx", "Dy", "Dz"]
+        rows = []
+        for s, name in enumerate(names):
+            for k, m in enumerate(methods):
+                for j, component in enumerate(components):
+                    row = [
+                        name if k == 0 and j == 0 else "",
+                        METHODS[m] if j == 0 else "",
+                    ]
+                    if not isotropic:
+                        row.append(
+                            component if component == "D" else f"D_{component[1]}"
+                        )
+                    box, fixed = estimates[m, s, component]
+                    row.extend(scaled(box))
+                    if with_correction:
+                        row.extend(scaled(fixed))
+                    rows.append(row)
+        colalign = ["left", "left"] + ([] if isotropic else ["left"])
+        colalign += ["decimal"] * (len(headers) - len(colalign))
+        text = tabulate(
+            rows,
+            headers=headers,
+            tablefmt="rounded_outline",
+            disable_numparse=True,
+            colalign=colalign,
+        )
+        length = len(text.splitlines()[0])
+        title = f"Self-diffusion coefficients ({unit})"
+        printer.normal(
+            __(
+                "\n" + title.center(length) + "\n" + text + "\n",
+                indent=8 * " ",
+                wrap=False,
+                dedent=False,
+            )
+        )
+
+    def _print_samples(self, names, methods, D, samples, source, scale, unit):
+        """The values of each run or block, in the detailed output."""
+        what = "Run" if source == "runs" else "Block"
+        headers = [
+            what,
+            "Species",
+            "Method",
+            "D_x",
+            "D_y",
+            "D_z",
+            "D",
+            "T (K)",
+            "L (Å)",
+        ]
+        rows = []
+        for i, sample in enumerate(samples):
+            first = True
+            for s, name in enumerate(names):
+                for m in methods:
+                    values = D[m][i, s, :] / scale
+                    row = [
+                        str(i + 1) if first else "",
+                        name,
+                        METHODS[m],
+                        *(f"{v:.3f}" for v in values),
+                        f"{values.mean():.3f}",
+                    ]
+                    if first and sample["T"] is not None:
+                        row.append(f"{sample['T']:.2f}")
+                    else:
+                        row.append("")
+                    if first and sample["L"] is not None:
+                        row.append(f"{sample['L']:.3f}")
+                    else:
+                        row.append("")
+                    rows.append(row)
+                    first = False
+        text = tabulate(
+            rows,
+            headers=headers,
+            tablefmt="rounded_outline",
+            disable_numparse=True,
+            colalign=("right", "left", "left", *(["decimal"] * 6)),
+        )
+        length = len(text.splitlines()[0])
+        title = f"By {what.lower()} ({unit})".center(length)
+        print_details(
+            printer,
+            str(
+                __(
+                    "\n" + title + "\n" + text + "\n",
+                    indent=8 * " ",
+                    wrap=False,
+                    dedent=False,
+                )
+            ),
+        )
+
+    def _plot(self, names, curves, P, scale):
+        """The MSD and Helfand moments, averaged over the runs or blocks, with the
+        fitted lines."""
+        settings = {
+            "MSD": (
+                "Mean Square Displacement",
+                "MSD",
+                "MSD (Å^2)",
+                ("msd_fit_start", "msd_fit_end"),
+                (2, 6),
+                add_msd_trace,
+                "MSD.graph",
+            ),
+            "HM": (
+                "Helfand Moments",
+                "HelfandMoments",
+                "M (Å^2)",
+                ("helfand_fit_start", "helfand_fit_end"),
+                (1, 3),
+                add_helfand_trace,
+                "HelfandMoments.graph",
+            ),
+        }
+        for method, per_sample in curves.items():
+            title, name, ylabel, fraction, divisors, add, filename = settings[method]
+            start, end = P[fraction[0]], P[fraction[1]]
+            figure = self.create_figure(
+                module_path=("seamm",),
+                template="line.graph_template",
+                title=title,
+            )
+            plot = figure.add_plot(name)
+            x_axis = plot.add_axis("x", label="Time (ps)")
+            y_axis = plot.add_axis("y", label=ylabel, anchor=x_axis)
+            x_axis.anchor = y_axis
+
+            ts = per_sample[0][1]
+            same = all(c[1].shape == ts.shape for c in per_sample)
+            for s, species in enumerate(names):
+                if same:
+                    curve = np.mean([c[0][s] for c in per_sample], axis=0)
+                else:
+                    curve = per_sample[0][0][s]
+                fit = []
+                for i in range(curve.shape[1]):
+                    line = fit_slope(curve[:, i], ts, start=start, end=end)
+                    divisor = divisors[0] if i < 3 else divisors[1]
+                    d = line.slope * A2_PER_PS / divisor
+                    fit.append(
+                        {
+                            "xs": list(line.xs),
+                            "ys": list(line.ys),
+                            "D_s": round(d / scale, 3),
+                            "scale": scale,
+                        }
+                    )
+                add(plot, x_axis, y_axis, species, curve, ts.tolist(), fit=fit)
+
+            figure.grid_plots(name)
+            path = Path(self.directory) / filename
+            figure.dump(path)
+            if "html" in self.options and self.options["html"]:
+                figure.template = "line.html_template"
+                figure.dump(path.with_suffix(".html"))
+
+    def _find_model(self):
+        """The model (forcefield or model chemistry) of the MD, for properties."""
+        try:
+            if self.variable_exists("_model_chemistry"):
+                return self.get_variable("_model_chemistry")["level"]
+            ff = self.get_variable("_forcefield")
+            if ff == "OpenKIM":
+                return "OpenKIM/" + self.get_variable("_OpenKIM_Potential")
+            if ff == "PyTorch":
+                return "PyTorch/" + self.get_variable("_pytorch_model")
+            return ff.current_forcefield
+        except Exception:
+            return "unknown"
+
+    # ------------------------------------------------------------------
+    # What the MD must provide
+    # ------------------------------------------------------------------
     def md_requirements(self, P=None):
         """What the analysis needs from the MD.
 
@@ -1432,9 +1199,9 @@ class Diffusivity(seamm.Node):
         seamm_md_analysis.Requirements
         """
         approach = self._static("approach") if P is None else P["approach"]
-        approach = str(approach).lower()
+        use_msd, use_hm = self._approaches(approach)
         needs = []
-        if approach == "both" or "msd" in approach:
+        if use_msd:
             needs.append(
                 Need(
                     ["molecules/position", "all/position"],
@@ -1443,7 +1210,7 @@ class Diffusivity(seamm.Node):
                     why="the mean square displacement",
                 )
             )
-        if approach == "both" or "helfand" in approach:
+        if use_hm:
             needs.append(
                 Need(
                     ["molecules/velocity", "all/velocity"],
@@ -1452,7 +1219,7 @@ class Diffusivity(seamm.Node):
                     why="the Helfand moments",
                 )
             )
-        return Requirements(needs=needs, periodic=True)
+        return Requirements(needs=needs, periodic=True, dynamics=True)
 
     def _static(self, key):
         """A parameter's value without evaluating variables, or None."""
@@ -1462,7 +1229,8 @@ class Diffusivity(seamm.Node):
         return parameter.get()
 
     def check_flowchart(self, preceding):
-        """Check, before the job runs, that the MD will sample what is needed.
+        """Check, before the job runs, that the MD will sample what is needed and is
+        set up for the analysis.
 
         Parameters
         ----------
@@ -1482,528 +1250,20 @@ class Diffusivity(seamm.Node):
     def check_configuration(self, configuration):
         """Called by an MD step before it runs MD that this step will analyze.
 
+        Returns
+        -------
+        [str]
+            Warnings about the structure, e.g. that it is small.
+
         Raises
         ------
         RuntimeError
             If the system is not periodic.
         """
-        source = self._static("md source")
-        if source == run_own_md:
-            return
         if configuration.periodicity != 3:
             raise RuntimeError(
                 f"'{self.title}' will analyze the MD, but the system is not "
                 "periodic: the diffusion coefficient of a cluster or molecule is not "
                 "a bulk property, and the finite-size correction needs the cell."
             )
-
-    def _run_replicas(self, P):
-        """Run the MD in the sub-flowchart several times and analyze each run."""
-        job_handler, job_level, out_handler, out_level = self._handlers
-
-        # Turn on any sampling the analysis needs but the MD lacks
-        changes, missing = request_sampling(self.subflowchart, self.md_requirements(P))
-        for change in changes:
-            printer.job(__(f"Note: {change}.", indent=self.indent + 4 * " "))
-        if len(missing) > 0:
-            raise RuntimeError(
-                "The MD in the sub-flowchart cannot provide what is needed: "
-                + " ".join(missing)
-            )
-
-        # Make sure the subflowchart has the data from the parent flowchart
-        self.subflowchart.root_directory = self.flowchart.root_directory
-        self.subflowchart.executor = self.flowchart.executor
-        self.subflowchart.in_jobserver = self.subflowchart.in_jobserver
-
-        # Get the first real node
-        first_node = self.subflowchart.get_node("1").next()
-
-        # Ensure the nodes have their options
-        node = first_node
-        while node is not None:
-            node.all_options = self.all_options
-            node = node.next()
-
-        # Loop over the runs
-        nruns = P["nruns"]
-        fmt = f"0{len(str(nruns))}"
-        for run in range(1, nruns + 1):
-            # Direct most output to iteration.out
-            run_dir = Path(self.directory) / f"run_{run:{fmt}}"
-            run_dir.mkdir(parents=True, exist_ok=True)
-
-            # A handler for the file
-            if self._file_handler is not None:
-                self._file_handler.close()
-                job.removeHandler(self._file_handler)
-            path = run_dir / "Run.out"
-            path.unlink(missing_ok=True)
-            self._file_handler = logging.FileHandler(path)
-            self._file_handler.setLevel(printing.NORMAL)
-            formatter = logging.Formatter(fmt="{message:s}", style="{")
-            self._file_handler.setFormatter(formatter)
-            job.addHandler(self._file_handler)
-
-            # Add the run to the ids so the directory structure is reasonable
-            self.flowchart.reset_visited()
-            self.set_subids((*self._id, f"run_{run:{fmt}}"))
-
-            # Run through the steps in the loop body
-            node = first_node
-            try:
-                while node is not None:
-                    node = node.run()
-            except DeprecationWarning as e:
-                printer.normal("\nDeprecation warning: " + str(e))
-                traceback.print_exc(file=sys.stderr)
-                traceback.print_exc(file=sys.stdout)
-            except Exception as e:
-                printer.job(f"Caught exception in run {run}: {str(e)}")
-                with open(run_dir / "stderr.out", "a") as fd:
-                    traceback.print_exc(file=fd)
-                if "continue" in P["errors"]:
-                    continue
-                elif "exit" in P["errors"]:
-                    break
-                else:
-                    raise
-            else:
-                self.process_run(run, run_dir, P)
-                if job_handler is not None:
-                    job_handler.setLevel(job_level)
-                if out_handler is not None:
-                    out_handler.setLevel(out_level)
-
-                self.analyze_run(P=P, run=run)
-
-                if job_handler is not None:
-                    job_handler.setLevel(printing.JOB)
-                if out_handler is not None:
-                    out_handler.setLevel(printing.JOB)
-
-            self.logger.debug(f"End of run {run}")
-
-    def parse_molecules(self):
-        """Get the lists of molecules of each type.
-
-        Returns
-        -------
-        {str, [int]}
-            The list of molecule numbers (0-based) for each canonical SMILES string
-            for a species.
-        """
-        # Create the subsets for the molecules
-        SMILES = self.configuration.get_molecule_smiles()
-        self._n_molecules = len(SMILES)
-        result = {}
-        for molecule, smiles in enumerate(SMILES):
-            if smiles not in result:
-                result[smiles] = [molecule]
-            else:
-                result[smiles].append(molecule)
-        return result
-
-    def process_run(self, run, run_dir, P=None, data=None):
-        """Get the positions and velocities from the run and do initial processing.
-
-        Parameters
-        ----------
-        run : int
-            The run number
-        run_dir : pathlib.Path or None
-            The toplevel directory of the run, or None if `data` is given.
-        P : [str: any]
-           Dictionary of control parameters, or default of None in which case the
-           standard parameters are used.
-        data : dict = None
-            The run's data, already read: "position" and "velocity" (TimeSeries or
-            None) and "state" ({"T": float, "a": float}, either may be missing).
-            Used for MD analyzed from earlier in the flowchart or from files.
-        """
-        if P is None:
-            P = self.parameters.current_values_to_dict(
-                context=seamm.flowchart_variables._data
-            )
-
-        # Get the state variables if saved in e.g. MD run
-        if run == 1:
-            # Reset any data of the system's state since this is a new calculation
-            self._state = {}
-
-        self._state_vars = []
-        state_variables = (
-            "T",
-            "T,stderr",
-            "P",
-            "P,stderr",
-            "density",
-            "density,stderr",
-            "a",
-            "a,stderr",
-            "V",
-            "V,stderr",
-        )
-        for variable in state_variables if data is None else ():
-            if self.variable_exists(variable):
-                if variable not in self._state:
-                    self._state[variable] = []
-                self._state[variable].append(self.get_variable(variable))
-                self._state_vars.append(variable)
-                # If they don't have standard errors, we still need space for them
-                if ",stderr" not in variable:
-                    var2 = variable + ",stderr"
-                    if not self.variable_exists(var2):
-                        if var2 not in self._state:
-                            self._state[var2] = []
-                        self._state[var2].append("")
-                        self._state_vars.append(var2)
-        if data is not None:
-            for variable, value in data.get("state", {}).items():
-                for var, v in ((variable, value), (f"{variable},stderr", "")):
-                    self._state.setdefault(var, []).append(v)
-                    self._state_vars.append(var)
-
-        n_species = len(self.species)
-        if self._use_msd:
-            tic = time.perf_counter_ns()
-            species = [x for x in self.species.values()]
-
-            if self._msds is None:
-                self._msds = [[] for i in range(n_species)]
-                self._msd_errs = [[] for i in range(n_species)]
-
-            if data is not None:
-                series = data["position"]
-                if series is None:
-                    raise RuntimeError(f"There is no position data for run {run}.")
-            else:
-                series = self._read_h5md(run, run_dir, "position", "Å")
-            if series is not None:
-                result = series.values
-                self._msd_dt = series.dt
-            else:
-                result = self._read_legacy_positions(run, run_dir)
-            self._check_n_molecules(result, run, "positions")
-
-            msd, err = msd_by_species(result, species)
-            self._msd_samples = result.shape[0]
-
-            for i in range(n_species):
-                self._msds[i].append(msd[i])
-                self._msd_errs[i].append(err[i])
-
-            if True:
-                # Analyze separately
-                self._msd = msd
-                self._msd_err = err
-            else:
-                # Average the MSD's then analyze
-                if run == 1:
-                    self._msd = msd
-                    self._msd_err = err
-                else:
-                    for i in range(n_species):
-                        tmp = np.stack(self._msds[i])
-                        self._msd[i] = np.average(tmp, axis=0)
-                        self._msd_err[i] = np.std(tmp, axis=0)
-            toc = time.perf_counter_ns()
-            _time = round((toc - tic) / 1e9, 2)
-            self._msd_times.append(_time)
-            if "t_msd" in self.results:
-                self.results["t_msd"] += _time
-            else:
-                self.results["t_msd"] = _time
-            self.logger.info(f"compute_msd: {_time:.3f}")
-
-        if self._use_velocity:
-            tic = time.perf_counter_ns()
-            species = [x for x in self.species.values()]
-
-            if self._Ms is None:
-                self._Ms = [[] for i in range(n_species)]
-                self._M_errs = [[] for i in range(n_species)]
-
-            if data is not None:
-                series = data["velocity"]
-                if series is None:
-                    raise RuntimeError(f"There is no velocity data for run {run}.")
-            else:
-                series = self._read_h5md(run, run_dir, "velocity", "Å/fs")
-            if series is not None:
-                result = series.values
-                self._velocity_dt = series.dt.to("fs")
-                tunits = "fs"
-            else:
-                result, tunits = self._read_legacy_velocities(run, run_dir)
-            self._check_n_molecules(result, run, "velocities")
-
-            # Limit the lengths of the data
-            n = result.shape[0]
-            if "maximum Helfand Integral length" in P:
-                m = min(n // 2, P["maximum Helfand Integral length"])
-            else:
-                m = min(n // 2, 5000)
-            self._helfand_integral_length = m
-
-            # Convert units and remember the factor of 2 in the Helfand moments
-            v_sq = Q_(f"Å^2/{tunits}^2")
-            constants = (v_sq * self._velocity_dt**2).m_as("Å^2") / 2
-
-            M, err = species_helfand_moments(result, species, m=m)
-            for i in range(n_species):
-                M[i] *= constants
-                err[i] *= constants
-                self._Ms[i].append(M[i])
-                self._M_errs[i].append(err[i])
-
-            if True:
-                # analyze separately
-                self._M = M
-                self._M_err = err
-            else:
-                # Average the Helfand moments, then analyze
-                if run == 1:
-                    self._M = M
-                    self._M_err = err
-                else:
-                    for i in range(n_species):
-                        tmp = np.stack(self._Ms[i])
-                        self._M[i] = np.average(tmp, axis=0)
-                        self._M_err[i] = np.std(tmp, axis=0)
-            toc = time.perf_counter_ns()
-            _time = round((toc - tic) / 1e9, 3)
-            if "t_hm" in self.results:
-                self.results["t_hm"] += _time
-            else:
-                self.results["t_hm"] = _time
-            self._helfand_integral_times.append(_time)
-            self.logger.info(f"create_helfand_moments: {_time:.3f}")
-
-    def _analyze_earlier_md(self, P):
-        """Analyze MD run earlier in the flowchart, or in other jobs."""
-        job_handler, job_level, out_handler, out_level = self._handlers
-
-        # The last run that sampled the first need, as checked before the job ran
-        paths = None
-        for name in self.md_requirements(P).needs[0].names:
-            try:
-                paths = md_inputs(self, P, name=name)
-                break
-            except RuntimeError:
-                continue
-        if paths is None:
-            paths = md_inputs(self, P)
-
-        runs = []
-        for path in paths:
-            runs.append(self._read_md_file(path))
-
-        text = f"Analyzing {len(paths)} MD run{'s' if len(paths) > 1 else ''}"
-        if len(runs) == 1:
-            n_blocks = P["number of blocks"]
-            runs = self._split_into_blocks(runs[0], n_blocks)
-            text += f", divided into {len(runs)} blocks to estimate the errors"
-        text += ": " + ", ".join(str(p) for p in paths)
-        printer.job(__(text, indent=self.indent + 4 * " "))
-        printer.job("")
-
-        P["nruns"] = len(runs)
-        for run, data in enumerate(runs, start=1):
-            self.process_run(run, None, P, data=data)
-            if job_handler is not None:
-                job_handler.setLevel(job_level)
-            if out_handler is not None:
-                out_handler.setLevel(out_level)
-            self.analyze_run(P=P, run=run)
-            if job_handler is not None:
-                job_handler.setLevel(printing.JOB)
-            if out_handler is not None:
-                out_handler.setLevel(printing.JOB)
-
-    def _read_md_file(self, path):
-        """Read what the analysis needs from one md.h5md.
-
-        Returns
-        -------
-        dict
-            "position" and "velocity" (TimeSeries or None), and "state".
-        """
-        data = {"position": None, "velocity": None, "state": {}}
-        with open_md(path) as md:
-            if not md.periodic:
-                raise RuntimeError(
-                    f"The MD in {path} is not periodic, so it has no diffusivity."
-                )
-            for name, units, use in (
-                ("position", "Å", self._use_msd),
-                ("velocity", "Å/fs", self._use_velocity),
-            ):
-                if not use:
-                    continue
-                for group in ("molecules", "all"):
-                    if md.has_particles(name, group):
-                        data[name] = md.particle_series(
-                            name, group=group, units=units, time_units="fs"
-                        )
-                        break
-            if md.has_observable("temperature"):
-                T = md.observable("temperature", units="K").values.mean()
-                data["state"]["T"] = round(float(T), 2)
-            box = md.box() if md.cell() is not None else None
-            if box is not None:
-                a = np.linalg.norm(box.values[:, 0, :], axis=1).mean()
-                data["state"]["a"] = round(float(a), 4)
-        return data
-
-    @staticmethod
-    def _split_into_blocks(data, n_blocks):
-        """Divide one run into consecutive blocks, analyzed as separate runs."""
-        n_blocks = max(1, int(n_blocks))
-        blocks = [dict(data, state=dict(data["state"])) for _ in range(n_blocks)]
-        for name in ("position", "velocity"):
-            series = data[name]
-            if series is None:
-                continue
-            n = len(series) // n_blocks
-            if n < 10:
-                raise RuntimeError(
-                    f"The run has only {len(series)} samples of the {name}s, too few "
-                    f"for {n_blocks} blocks."
-                )
-            for i in range(n_blocks):
-                part = slice(i * n, (i + 1) * n)
-                blocks[i][name] = type(series)(
-                    name=series.name,
-                    values=series.values[part],
-                    times=series.times[part],
-                    steps=series.steps[part],
-                    units=series.units,
-                    time_units=series.time_units,
-                )
-        return blocks
-
-    def _read_h5md(self, run, run_dir, name, units):
-        """The molecular (or atomic) positions or velocities from md.h5md, if any.
-
-        Parameters
-        ----------
-        run : int
-            The run number.
-        run_dir : pathlib.Path
-            The run's directory.
-        name : str
-            "position" or "velocity".
-        units : str
-            The units to return them in.
-
-        Returns
-        -------
-        seamm_md_analysis.TimeSeries or None
-            None if no md.h5md in the run has them; then the older files are read.
-        """
-        found = []
-        for path in sorted(run_dir.glob("**/md.h5md")):
-            with open_md(path) as md:
-                for group in ("molecules", "all"):
-                    if md.has_particles(name, group):
-                        found.append((path, group))
-                        break
-        if len(found) == 0:
-            return None
-        if len(found) > 1:
-            raise NotImplementedError(
-                f"Cannot handle {name}s from more than one MD run in run {run}."
-            )
-        path, group = found[0]
-        with open_md(path) as md:
-            return md.particle_series(name, group=group, units=units, time_units="fs")
-
-    def _check_n_molecules(self, values, run, what):
-        """The data must be per molecule, or per atom only if atoms are molecules."""
-        if values.shape[1] != self.n_molecules:
-            raise RuntimeError(
-                f"Run {run} has {what} of {values.shape[1]} particles, but there are "
-                f"{self.n_molecules} molecules. Sample the {what} of the molecules' "
-                "centers of mass in the MD; the atomic ones can be used only when "
-                "each molecule is a single atom."
-            )
-
-    def _read_legacy_positions(self, run, run_dir):
-        """The positions from the files of older versions of the LAMMPS step."""
-        paths = sorted(run_dir.glob("**/com_positions.trj"))
-
-        if len(paths) == 0:
-            # See if there are atom positions?
-            paths = sorted(run_dir.glob("**/atomic_positions.dump_trj"))
-            if len(paths) == 0:
-                raise RuntimeError(f"There is no position data for run {run}.")
-            else:
-                trj_type = "dump"
-        else:
-            trj_type = "vector"
-
-        if len(paths) > 1:
-            raise NotImplementedError(
-                f"Cannot handle multiple position files from run {run}."
-            )
-
-        if trj_type == "vector":
-            metadata, result = read_vector_trajectory(paths[0])
-        else:
-            metadata, result = read_dump_trajectory(paths[0])
-        self._msd_dt = Q_(metadata["dt"], metadata["tunits"])
-        return result
-
-    def _read_legacy_velocities(self, run, run_dir):
-        """The velocities from the files of older versions of the LAMMPS step.
-
-        Returns
-        -------
-        numpy.ndarray, str
-            The velocities, and the time units of the velocities and of the
-            interval, e.g. "fs".
-        """
-        paths = sorted(run_dir.glob("**/com_velocities.trj"))
-
-        if len(paths) == 0:
-            # See if there are atom velocities?
-            paths = sorted(run_dir.glob("**/atomic_velocities.dump_trj"))
-            if len(paths) == 0:
-                raise RuntimeError(f"There is no velocity data for run {run}.")
-            else:
-                trj_type = "dump"
-        else:
-            trj_type = "vector"
-
-        if len(paths) > 1:
-            raise NotImplementedError(
-                f"Cannot handle multiple velocity files from run {run}."
-            )
-
-        if trj_type == "vector":
-            metadata, result = read_vector_trajectory(paths[0])
-        else:
-            metadata, result = read_dump_trajectory(paths[0])
-        self._velocity_dt = Q_(metadata["dt"], metadata["tunits"])
-        return result, metadata["tunits"]
-
-    def set_id(self, node_id=()):
-        """Sequentially number the subnodes"""
-        self.logger.debug("Setting ids for subflowchart {}".format(self))
-        if self.visited:
-            return None
-        else:
-            self.visited = True
-            self._id = node_id
-            self.set_subids(self._id)
-            return self.next()
-
-    def set_subids(self, node_id=()):
-        """Set the ids of the nodes in the subflowchart"""
-        self.subflowchart.reset_visited()
-        node = self.subflowchart.get_node("1").next()
-        n = 1
-        while node is not None:
-            node = node.set_id((*node_id, str(n)))
-            n += 1
+        return [f"'{self.title}': {w}" for w in size_warnings(configuration)]
